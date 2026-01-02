@@ -57,4 +57,9 @@ void gerarficheiroocupacao(char *ficheirovalido, char *ficheiroocupacao,
                            int diaU, int mesU, int anoU, int horaU, int minU);
 void atualizarValidacao(Confparque config);
 void ProcessarLugar(char *lugarStr, int *piso, int *fila, int *numero);
+int registarEntradaAutomatica(Confparque config, char *ficheiroEstacionamentos);
+int registarSaidaAutomatica(Confparque config, char *ficheiroEstacionamentos);
+void MostrarMapaOcupacao_Paginado(Confparque config, char *ficheiroOcupacao,
+                                  Lugar mapa[][MAX_FILAS][MAX_LUGARES]);
+void MostrarLegendaMapa(void);
 #endif /* Estacionamento_h */
