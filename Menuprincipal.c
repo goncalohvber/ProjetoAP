@@ -34,48 +34,115 @@ void mostrarMenu(void) {
         printf("\t||   [0] Sair                         ||\n");
         printf("\t||                                    ||\n");
         printf("\t========================================\n");
+        printf("\t||                                    ||\n");
+    
         printf("\n\t>> Escolha uma opção: ");
         scanf("%d", &op1);
         
         switch (op1) {
                 
-            case 1:
-                if (registarEntrada(config, "estacionamentos.txt")) {
-                    printf("\n Operação concluída!\n");
-                } else {
-                    printf("\nFalha ao registar entrada!\n");
+            case 1: {
+                int opcao;
+                printf("\n╔═══════════════════════════════════════╗\n");
+                printf("║     MODO DE ENTRADA                   ║\n");
+                printf("╠═══════════════════════════════════════╣\n");
+                printf("║  1. Entrada automática (data atual)   ║\n");
+                printf("║  2. Entrada manual (inserir data)     ║\n");
+                printf("╚═══════════════════════════════════════╝\n");
+                printf("Escolha: ");
+                scanf("%d", &opcao);
+                
+                if (opcao == 1) {
+                    if (registarEntradaAutomatica(config, "estacionamentos.txt")) {
+                        printf("\n✅ Operação concluída!\n");
+                    } else {
+                        printf("\n❌ Falha ao registar entrada!\n");
+                    }
+                } else if (opcao == 2) {
+                    if (registarEntrada(config, "estacionamentos.txt")) {
+                        printf("\n✅ Operação concluída!\n");
+                    } else {
+                        printf("\n❌ Falha ao registar entrada!\n");
+                    }
                 }
+                
                 mostrarMensagem("Prima Enter para continuar...");
                 mostrarMenu();
                 break;
+            }
+
+            case 2: {
+                int opcao;
+                printf("\n╔═══════════════════════════════════════╗\n");
+                printf("║     MODO DE SAÍDA                     ║\n");
+                printf("╠═══════════════════════════════════════╣\n");
+                printf("║  1. Saída automática (data atual)     ║\n");
+                printf("║  2. Saída manual (inserir data)       ║\n");
+                printf("╚═══════════════════════════════════════╝\n");
+                printf("Escolha: ");
+                scanf("%d", &opcao);
                 
-            case 2:
-                if (registarSaida(config, "estacionamentos.txt")) {
+                if (opcao == 1) {
+                    if (registarSaidaAutomatica(config, "estacionamentos.txt")) {
                         printf("\n✅ Operação concluída!\n");
-                                atualizarValidacao(config);
-                                } else {
-                                printf("\n❌ Falha ao registar saída!\n");
-                                }
-                            mostrarMensagem("Prima Enter para continuar...");
-                               mostrarMenu();
-                            break;
+                        atualizarValidacao(config);
+                    } else {
+                        printf("\n❌ Falha ao registar saída!\n");
+                    }
+                } else if (opcao == 2) {
+                    if (registarSaida(config, "estacionamentos.txt")) {
+                        printf("\n✅ Operação concluída!\n");
+                        atualizarValidacao(config);
+                    } else {
+                        printf("\n❌ Falha ao registar saída!\n");
+                    }
+                }
                 
-            case 3:
-                printf("Qual a data que quer ver? (DD MM AAAA): ");
-                scanf("%d %d %d", &diaU, &mesU, &anoU);
-                printf("Qual a hora? (HH MM): ");
-                scanf("%d %d", &horaU, &minU);
+                mostrarMensagem("Prima Enter para continuar...");
+                mostrarMenu();
+                break;
+            }
+
+            case 3: {
+                int opcao;
+                printf("\n╔═══════════════════════════════════════╗\n");
+                printf("║     MODO DE VISUALIZAÇÃO              ║\n");
+                printf("╠═══════════════════════════════════════╣\n");
+                printf("║  1. Mapa atual (data do sistema)      ║\n");
+                printf("║  2. Mapa personalizado (inserir data) ║\n");
+                printf("╚═══════════════════════════════════════╝\n");
+                printf("Escolha: ");
+                scanf("%d", &opcao);
+                
+                int diaU, mesU, anoU, horaU, minU;
+                
+                if (opcao == 1) {
+                    obterDataHoraAtual(&diaU, &mesU, &anoU, &horaU, &minU);
+                    printf("\n📅 Mostrando mapa para: %02d/%02d/%d às %02d:%02d\n",
+                           diaU, mesU, anoU, horaU, minU);
+                } else if (opcao == 2) {
+                    printf("Qual a data que quer ver? (DD MM AAAA): ");
+                    scanf("%d %d %d", &diaU, &mesU, &anoU);
+                    printf("Qual a hora? (HH MM): ");
+                    scanf("%d %d", &horaU, &minU);
+                } else {
+                    printf("❌ Opção inválida!\n");
+                    mostrarMensagem("Prima Enter para continuar...");
+                    mostrarMenu();
+                    break;
+                }
                 
                 gerarficheiroocupacao("estacionamentos_validos.txt", "Ocupacaoatual.txt",
                                      diaU, mesU, anoU, horaU, minU);
                 
                 Lugar mapa[MAX_PISOS][MAX_FILAS][MAX_LUGARES];
-                MostrarMapaOcupacao_ComMapa(config, "Ocupacaoatual.txt", mapa);
+                MostrarMapaOcupacao_Paginado(config, "Ocupacaoatual.txt", mapa);
+
                 
-                mostrarMensagem("\nA voltar para o meu principal...");
-                limparTela();
+                mostrarMensagem("\nPrima Enter para continuar...");
                 mostrarMenu();
                 break;
+            }
                 
             case 4:
                 remove("configfeita.txt");
