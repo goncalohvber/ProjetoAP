@@ -1,1 +1,1 @@
-Empresa: Goncarro	Usuário: goncalo	Tamanho do parque 5 Pisos * 20 Filas * 20 Lugares	Quantidade de lugares totais: 2000
+Empresa: goncarros	Usuário: goncalo	Tamanho do parque 5 Pisos * 26 Filas * 40 Lugares	Quantidade de lugares totais: 5200

@@ -49,4 +49,5 @@ void gravarListagemTXT(estacionamento est[], int numRegistos, char *nomeFicheiro
 // Gravar listagem em CSV (EXTRA - se tiverem tempo)
 void gravarListagemCSV(estacionamento est[], int numRegistos, char *nomeFicheiro);
 
+void gerarTabelaDinamica(char *ficheiroEstacionamentos);
 #endif /* Listagens_h */

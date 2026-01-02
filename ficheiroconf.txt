@@ -1,5 +1,5 @@
-5 20 20
+5 26 40
 # Configuracao do Parque de Estacionamento
 # Pisos: 5
-# Filas: 20 (A-T)
-# Lugares por fila: 20
+# Filas: 26 (A-Z)
+# Lugares por fila: 40

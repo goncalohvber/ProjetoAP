@@ -18,43 +18,115 @@ int guardartarifas(Tarifa tarifas[], int numtarifas){
 
 int modificatarifa(Tarifa tarifas[], int *numtarifas) {
     float valortemp;
-    char Codigoescolhido[5];
-    printf("Qual o código associado à tarifa que quer modificar (CT1, CT2,...)?\n");
-    printf("Código: ");
+    char Codigoescolhido[10];
+    int encontrado = 0;
+    
+    printf("\n╔════════════════════════════════════════╗\n");
+    printf("║     📝 MODIFICAR TARIFA                ║\n");
+    printf("╚════════════════════════════════════════╝\n\n");
+    
+    // Limpar buffer
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+    
+    printf("Códigos disponíveis: ");
+    for (int i = 0; i < *numtarifas; i++) {
+        printf("%s", tarifas[i].codigo);
+        if (i < *numtarifas - 1) printf(", ");
+    }
+    printf("\n\n");
+    
+    printf("Qual o código da tarifa que quer modificar? ");
     scanf("%s", Codigoescolhido);
-    for(int i=0;i<*numtarifas; i++) {
-        if(strcmp(tarifas[i].codigo, Codigoescolhido) == 0){
-            printf("Valor atual do %s: %.2f\n", Codigoescolhido, tarifas[i].valor);
-            do{
-                printf("Novo valor: ");
-                scanf("%f", &valortemp);
-                if (valortemp<=0) {
-                    printf("O novo valor deve ser maior que 0.00");
+    
+    for(int i = 0; i < *numtarifas; i++) {
+        if(strcmp(tarifas[i].codigo, Codigoescolhido) == 0) {
+            encontrado = 1;
+            
+            printf("\n┌────────────────────────────────────┐\n");
+            printf("│ TARIFA ATUAL: %s                   \n", Codigoescolhido);
+            printf("├────────────────────────────────────┤\n");
+            printf("│ Tipo: %c                           \n", tarifas[i].tipo);
+            printf("│ Horário: %02d:%02d - %02d:%02d         \n",
+                   tarifas[i].horaInf, tarifas[i].minInf,
+                   tarifas[i].horaSup, tarifas[i].minSup);
+            printf("│ Valor: %.2f €                      \n", tarifas[i].valor);
+            printf("└────────────────────────────────────┘\n\n");
+            
+            do {
+                printf("Novo valor (€): ");
+                if (scanf("%f", &valortemp) != 1) {
+                    printf("❌ Entrada inválida! Use números.\n");
+                    while ((c = getchar()) != '\n' && c != EOF);
+                    valortemp = -1;
+                    continue;
                 }
-            }while(valortemp<=0);
+                
+                if (valortemp <= 0) {
+                    printf("❌ O valor deve ser maior que 0.00 €\n\n");
+                }
+            } while(valortemp <= 0);
+            
             tarifas[i].valor = valortemp;
+            
             if (guardartarifas(tarifas, *numtarifas)) {
-                printf("Valor modificado com sucesso.");
+                printf("\n✅ Valor de %s alterado para %.2f €\n",
+                       Codigoescolhido, valortemp);
                 return 1;
+            } else {
+                printf("\n❌ Erro ao guardar tarifa!\n");
+                return 0;
             }
         }
     }
-    printf("O código %s não existe no tarifário.", Codigoescolhido);
+    
+    if (!encontrado) {
+        printf("\n❌ O código '%s' não existe no tarifário!\n", Codigoescolhido);
+    }
+    
     return 0;
 }
 
 
 void mostrarTabela(Tarifa tarifas[], int n) {
-    printf("\n------------ VALORES DEFINIDOS ------------\n");
+    printf("\n┌─────────────────────────────────────────────────────────────┐\n");
+    printf("│              📋 TARIFÁRIO ATUAL                             │\n");
+    printf("├────────┬──────────┬───────────────┬──────┬─────────────────┤\n");
+    printf("│ Código │  Valor   │   Horário     │ Tipo │   Descrição     │\n");
+    printf("├────────┼──────────┼───────────────┼──────┼─────────────────┤\n");
+    
     for (int i = 0; i < n; i++) {
-        printf("%s\tValor: %.2f €\t(%02d:%02d - %02d:%02d)\t%c\n",
+        char descricao[20];
+        
+        if (tarifas[i].tipo == 'H') {
+            if (strcmp(tarifas[i].codigo, "CT1") == 0) {
+                strcpy(descricao, "Horário Diurno");
+            } else if (strcmp(tarifas[i].codigo, "CT2") == 0) {
+                strcpy(descricao, "Horário Noturno");
+            } else {
+                strcpy(descricao, "Horário");
+            }
+        } else if (tarifas[i].tipo == 'D') {
+            if (strcmp(tarifas[i].codigo, "CT3") == 0) {
+                strcpy(descricao, "Mudança de Dia");
+            } else if (strcmp(tarifas[i].codigo, "CT4") == 0) {
+                strcpy(descricao, "Dia Completo");
+            } else {
+                strcpy(descricao, "Diário");
+            }
+        }
+        
+        printf("│  %4s  │ %6.2f € │ %02d:%02d - %02d:%02d │  %c   │ %-15s │\n",
                tarifas[i].codigo,
                tarifas[i].valor,
                tarifas[i].horaInf, tarifas[i].minInf,
                tarifas[i].horaSup, tarifas[i].minSup,
-               tarifas[i].tipo);
+               tarifas[i].tipo,
+               descricao);
     }
-    printf("------------------------------------------\n");}
+    
+    printf("└────────┴──────────┴───────────────┴──────┴─────────────────┘\n");
+}
 
 int lertarifas(Tarifa tarifas[], int *numtarifas) {
     // Validar parâmetros

@@ -40,7 +40,7 @@ void mostrarBarraNavegacao(ControlePaginacao ctrl) {
     printf("╠═══════════════════════════════════════════════════════════╣\n");
     printf("║  [N] Próxima página  [P] Página anterior                  ║\n");
     printf("║  [G] Gravar em TXT   [C] Gravar em CSV                    ║\n");
-    printf("║  [0] Voltar                                               ║\n");
+    printf("║  [0] Sair                                                 ║\n");
     printf("╚═══════════════════════════════════════════════════════════╝\n");
 }
 
@@ -157,29 +157,28 @@ void listarTodosEstacionamentos(char *ficheiroEstacionamentos) {
         return;
     }
 
-    // Ler todos os registos
+    // ✅ CORREÇÃO: Ler o formato correto (14 campos, incluindo preço)
     while (fscanf(f, "%d %s %d %d %d %d %d %s %d %d %d %d %d %f",
                   &est[numTotal].numE, est[numTotal].matricula,
                   &est[numTotal].anoE, &est[numTotal].mesE, &est[numTotal].diaE,
                   &est[numTotal].horaE, &est[numTotal].minE,
                   est[numTotal].lugar,
                   &est[numTotal].anoS, &est[numTotal].mesS, &est[numTotal].diaS,
-                  &est[numTotal].horaS, &est[numTotal].minS, &est[numTotal].valorPago) == 14) {
+                  &est[numTotal].horaS, &est[numTotal].minS,
+                  &est[numTotal].valorPago) == 14) {
 
-        // Calcular valor pago se já saiu
-        if (est[numTotal].anoS != 0) {
+        // Se já saiu mas não tem preço calculado, calcular
+        if (est[numTotal].anoS != 0 && est[numTotal].valorPago == 0.0) {
             Tarifa tarifas[MAX_TARIFAS];
             int numTarifas = 0;
-            lertarifas(tarifas, &numTarifas);
-
-            est[numTotal].valorPago = CalcularPreco(
-                est[numTotal].diaE, est[numTotal].mesE, est[numTotal].anoE,
-                est[numTotal].horaE, est[numTotal].minE,
-                est[numTotal].diaS, est[numTotal].mesS, est[numTotal].anoS,
-                est[numTotal].horaS, est[numTotal].minS,
-                tarifas, numTarifas);
-        } else {
-            est[numTotal].valorPago = 0.0;
+            if (lertarifas(tarifas, &numTarifas)) {
+                est[numTotal].valorPago = CalcularPreco(
+                    est[numTotal].diaE, est[numTotal].mesE, est[numTotal].anoE,
+                    est[numTotal].horaE, est[numTotal].minE,
+                    est[numTotal].diaS, est[numTotal].mesS, est[numTotal].anoS,
+                    est[numTotal].horaS, est[numTotal].minS,
+                    tarifas, numTarifas);
+            }
         }
 
         numTotal++;
@@ -189,8 +188,13 @@ void listarTodosEstacionamentos(char *ficheiroEstacionamentos) {
 
     if (numTotal == 0) {
         printf("\n  Não há estacionamentos registados!\n");
+        printf("Pressione ENTER para continuar...");
+        getchar();
+        getchar();
         return;
     }
+
+    printf("\n✅ Total de registos carregados: %d\n", numTotal);
 
     // Inicializar paginação (15 registos por página)
     ControlePaginacao ctrl = inicializarPaginacao(numTotal, 15);
@@ -301,63 +305,70 @@ void listarPorData(char *ficheiroEstacionamentos) {
 
     do {
         printf("Data (DD MM AAAA): ");
-        scanf("%d %d %d", &dia, &mes, &ano);
+        int resultado = scanf("%d %d %d", &dia, &mes, &ano);
+        
+        // ✅ CORREÇÃO: Limpar buffer se scanf falhou
+        if (resultado != 3) {
+            printf("❌ Entrada inválida! Use números.\n");
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF);
+            continue;
+        }
+        
         if (!validaData(dia, mes, ano)) {
-            printf(" Data inválida!\n");
+            printf("❌ Data inválida!\n");
         }
     } while (!validaData(dia, mes, ano));
 
     // Carregar e filtrar
-    estacionamento est[MAX_REG_EST];
     estacionamento filtrados[MAX_REG_EST];
-    int numTotal = 0, numFiltrados = 0;
+    int numFiltrados = 0;
 
     FILE *f = fopen(ficheiroEstacionamentos, "r");
     if (f == NULL) {
-        printf("\n Erro ao abrir ficheiro!\n");
+        printf("\n❌ Erro ao abrir ficheiro!\n");
+        printf("Pressione ENTER para continuar...");
+        getchar();
+        getchar();
         return;
     }
 
-    while (fscanf(f, "%d %s %d %d %d %d %d %s %d %d %d %d %d",
-                  &est[numTotal].numE, est[numTotal].matricula,
-                  &est[numTotal].anoE, &est[numTotal].mesE, &est[numTotal].diaE,
-                  &est[numTotal].horaE, &est[numTotal].minE,
-                  est[numTotal].lugar,
-                  &est[numTotal].anoS, &est[numTotal].mesS, &est[numTotal].diaS,
-                  &est[numTotal].horaS, &est[numTotal].minS) == 13) {
+    estacionamento temp;
+    // ✅ CORREÇÃO: Ler 14 campos (incluindo preço)
+    while (fscanf(f, "%d %s %d %d %d %d %d %s %d %d %d %d %d %f",
+                  &temp.numE, temp.matricula,
+                  &temp.anoE, &temp.mesE, &temp.diaE,
+                  &temp.horaE, &temp.minE,
+                  temp.lugar,
+                  &temp.anoS, &temp.mesS, &temp.diaS,
+                  &temp.horaS, &temp.minS,
+                  &temp.valorPago) == 14) {
 
         // Filtrar por data de ENTRADA
-        if (est[numTotal].anoE == ano &&
-            est[numTotal].mesE == mes &&
-            est[numTotal].diaE == dia) {
+        if (temp.anoE == ano && temp.mesE == mes && temp.diaE == dia) {
 
-            // Calcular valor
-            if (est[numTotal].anoS != 0) {
+            // Calcular valor se necessário
+            if (temp.anoS != 0 && temp.valorPago == 0.0) {
                 Tarifa tarifas[MAX_TARIFAS];
                 int numTarifas = 0;
-                lertarifas(tarifas, &numTarifas);
-
-                est[numTotal].valorPago = CalcularPreco(
-                    est[numTotal].diaE, est[numTotal].mesE, est[numTotal].anoE,
-                    est[numTotal].horaE, est[numTotal].minE,
-                    est[numTotal].diaS, est[numTotal].mesS, est[numTotal].anoS,
-                    est[numTotal].horaS, est[numTotal].minS,
-                    tarifas, numTarifas);
-            } else {
-                est[numTotal].valorPago = 0.0;
+                if (lertarifas(tarifas, &numTarifas)) {
+                    temp.valorPago = CalcularPreco(
+                        temp.diaE, temp.mesE, temp.anoE,
+                        temp.horaE, temp.minE,
+                        temp.diaS, temp.mesS, temp.anoS,
+                        temp.horaS, temp.minS,
+                        tarifas, numTarifas);
+                }
             }
 
-            filtrados[numFiltrados] = est[numTotal];
+            filtrados[numFiltrados] = temp;
             numFiltrados++;
         }
-
-        numTotal++;
-        if (numTotal >= MAX_REG_EST) break;
     }
     fclose(f);
 
     if (numFiltrados == 0) {
-        printf("\n  Não há estacionamentos para essa data!\n");
+        printf("\n⚠️  Não há estacionamentos para essa data!\n");
         printf("Pressione ENTER para continuar...");
         getchar();
         getchar();
@@ -436,9 +447,6 @@ void listarPorData(char *ficheiroEstacionamentos) {
     } while (opcao != '0');
 }
 
-// ============================================================
-// 3. LISTAR POR MATRÍCULA (FUNCIONALIDADE EXTRA 2)
-// ============================================================
 void listarPorMatricula(char *ficheiroEstacionamentos) {
     char matriculaProcurada[10];
 
@@ -446,11 +454,19 @@ void listarPorMatricula(char *ficheiroEstacionamentos) {
     printf("║       🚗 LISTAR ESTACIONAMENTOS POR MATRÍCULA            ║\n");
     printf("╚═══════════════════════════════════════════════════════════╝\n\n");
 
+    // ✅ CORREÇÃO: Limpar buffer antes de ler
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+
     do {
         printf("Matrícula (XX-XX-XX): ");
-        scanf("%s", matriculaProcurada);
+        fgets(matriculaProcurada, sizeof(matriculaProcurada), stdin);
+        
+        // Remover newline
+        matriculaProcurada[strcspn(matriculaProcurada, "\n")] = 0;
+        
         if (!validamatricula(matriculaProcurada)) {
-            printf("❌ Matrícula inválida!\n");
+            printf("❌ Matrícula inválida! Formato: XX-XX-XX\n\n");
         }
     } while (!validamatricula(matriculaProcurada));
 
@@ -461,30 +477,32 @@ void listarPorMatricula(char *ficheiroEstacionamentos) {
     FILE *f = fopen(ficheiroEstacionamentos, "r");
     if (f == NULL) {
         printf("\n❌ Erro ao abrir ficheiro!\n");
+        printf("Pressione ENTER para continuar...");
+        getchar();
         return;
     }
 
     estacionamento temp;
-    while (fscanf(f, "%d %s %d %d %d %d %d %s %d %d %d %d %d",
+    // ✅ CORREÇÃO: Ler 14 campos
+    while (fscanf(f, "%d %s %d %d %d %d %d %s %d %d %d %d %d %f",
                   &temp.numE, temp.matricula,
                   &temp.anoE, &temp.mesE, &temp.diaE,
                   &temp.horaE, &temp.minE,
                   temp.lugar,
                   &temp.anoS, &temp.mesS, &temp.diaS,
-                  &temp.horaS, &temp.minS) == 13) {
+                  &temp.horaS, &temp.minS,
+                  &temp.valorPago) == 14) {
 
         if (strcmp(temp.matricula, matriculaProcurada) == 0) {
-            if (temp.anoS != 0) {
+            if (temp.anoS != 0 && temp.valorPago == 0.0) {
                 Tarifa tarifas[MAX_TARIFAS];
                 int numTarifas = 0;
-                lertarifas(tarifas, &numTarifas);
-
-                temp.valorPago = CalcularPreco(
-                    temp.diaE, temp.mesE, temp.anoE, temp.horaE, temp.minE,
-                    temp.diaS, temp.mesS, temp.anoS, temp.horaS, temp.minS,
-                    tarifas, numTarifas);
-            } else {
-                temp.valorPago = 0.0;
+                if (lertarifas(tarifas, &numTarifas)) {
+                    temp.valorPago = CalcularPreco(
+                        temp.diaE, temp.mesE, temp.anoE, temp.horaE, temp.minE,
+                        temp.diaS, temp.mesS, temp.anoS, temp.horaS, temp.minS,
+                        tarifas, numTarifas);
+                }
             }
 
             filtrados[numFiltrados] = temp;
@@ -497,7 +515,6 @@ void listarPorMatricula(char *ficheiroEstacionamentos) {
         printf("\n⚠️  Não há estacionamentos para essa matrícula!\n");
         printf("Pressione ENTER para continuar...");
         getchar();
-        getchar();
         return;
     }
 
@@ -505,7 +522,7 @@ void listarPorMatricula(char *ficheiroEstacionamentos) {
     system("cls");
     printf("\n");
     printf("╔═══════════════════════════════════════════════════════════╗\n");
-    printf("║      🚗 HISTÓRICO DA MATRÍCULA: %s                  ║\n", matriculaProcurada);
+    printf("║      🚗 HISTÓRICO DA MATRÍCULA: %-10s             ║\n", matriculaProcurada);
     printf("╚═══════════════════════════════════════════════════════════╝\n\n");
 
     printf("Total de estacionamentos: %d\n\n", numFiltrados);
@@ -561,17 +578,22 @@ void listarVeiculosNoParque(char *ficheiroEstacionamentos) {
     FILE *f = fopen(ficheiroEstacionamentos, "r");
     if (f == NULL) {
         printf("\n❌ Erro ao abrir ficheiro!\n");
+        printf("Pressione ENTER para continuar...");
+        getchar();
+        getchar();
         return;
     }
 
     estacionamento temp;
-    while (fscanf(f, "%d %s %d %d %d %d %d %s %d %d %d %d %d",
+    // ✅ CORREÇÃO: Ler 14 campos
+    while (fscanf(f, "%d %s %d %d %d %d %d %s %d %d %d %d %d %f",
                   &temp.numE, temp.matricula,
                   &temp.anoE, &temp.mesE, &temp.diaE,
                   &temp.horaE, &temp.minE,
                   temp.lugar,
                   &temp.anoS, &temp.mesS, &temp.diaS,
-                  &temp.horaS, &temp.minS) == 13) {
+                  &temp.horaS, &temp.minS,
+                  &temp.valorPago) == 14) {
 
         // Apenas veículos que ainda não saíram
         if (temp.anoS == 0) {
@@ -582,7 +604,7 @@ void listarVeiculosNoParque(char *ficheiroEstacionamentos) {
     fclose(f);
 
     if (numFiltrados == 0) {
-        printf("\n  Não há veículos no parque!\n");
+        printf("\n⚠️  Não há veículos no parque!\n");
         printf("Pressione ENTER para continuar...");
         getchar();
         getchar();
@@ -594,7 +616,7 @@ void listarVeiculosNoParque(char *ficheiroEstacionamentos) {
 
     char opcao;
     do {
-        system("clear");
+        system("cls");
         printf("\n");
         printf("╔═══════════════════════════════════════════════════════════╗\n");
         printf("║               VEÍCULOS ATUALMENTE NO PARQUE               ║\n");
@@ -662,6 +684,10 @@ void menuListagens(Confparque config) {
         printf("║  3.   Listar por MATRÍCULA                                ║\n");
         printf("║  4.   Listar veículos NO PARQUE                           ║\n");
         printf("║                                                           ║\n");
+        printf("║  === EXTRAS ===                                           ║\n");
+        printf("║  5.   E2 - Tabela Dinâmica (Saídas por Data)              ║\n");
+        printf("║  6.   E3 - Exportar para CSV                              ║\n");
+        printf("║                                                           ║\n");
         printf("║  0.   Voltar ao menu principal                            ║\n");
         printf("║                                                           ║\n");
         printf("╚═══════════════════════════════════════════════════════════╝\n");
@@ -684,9 +710,17 @@ void menuListagens(Confparque config) {
             case 4:
                 listarVeiculosNoParque("estacionamentos_validos.txt");
                 break;
+            
+            case 5:
+                gerarTabelaDinamica("estacionamentos_validos.txt");
+                break;
+            
+            case 6:
+                // Sua E3 já existente aqui
+                printf("E3 - Exportar CSV\n");
+                break;
 
             case 0:
-                
                 mostrarMenu();
                 break;
 
@@ -698,4 +732,257 @@ void menuListagens(Confparque config) {
         }
 
     } while (opcao != 0);
+}
+
+
+// Estrutura para armazenar dados da tabela dinâmica
+typedef struct {
+    int dia;
+    int mes;
+    int totalSaidas;
+    float totalValor;
+} DadosDiario;
+
+// Função auxiliar: Comparar duas datas
+int compararDatas(int d1, int m1, int a1, int d2, int m2, int a2) {
+    if (a1 != a2) return a1 - a2;
+    if (m1 != m2) return m1 - m2;
+    return d1 - d2;
+}
+
+// Função auxiliar: Verificar se data está entre intervalo
+int dataNoIntervalo(int dia, int mes, int ano,
+                    int diaInicio, int mesInicio, int anoInicio,
+                    int diaFim, int mesFim, int anoFim) {
+    
+    int resultado1 = compararDatas(dia, mes, ano, diaInicio, mesInicio, anoInicio);
+    int resultado2 = compararDatas(dia, mes, ano, diaFim, mesFim, anoFim);
+    
+    // Data está entre início e fim (inclusive)
+    return (resultado1 >= 0) && (resultado2 <= 0);
+}
+
+void gerarTabelaDinamica(char *ficheiroEstacionamentos) {
+    int diaInicio, mesInicio, anoInicio;
+    int diaFim, mesFim, anoFim;
+    
+    printf("\n╔═══════════════════════════════════════════════════════════╗\n");
+    printf("║          📊 TABELA DINÂMICA - SAÍDAS POR DATA            ║\n");
+    printf("╚═══════════════════════════════════════════════════════════╝\n\n");
+    
+    // Pedir data inicial
+    do {
+        printf("Data INICIAL (DD MM AAAA): ");
+        scanf("%d %d %d", &diaInicio, &mesInicio, &anoInicio);
+        if (!validaData(diaInicio, mesInicio, anoInicio)) {
+            printf("❌ Data inválida! Tente novamente.\n\n");
+        }
+    } while (!validaData(diaInicio, mesInicio, anoInicio));
+    
+    // Pedir data final
+    do {
+        printf("Data FINAL (DD MM AAAA): ");
+        scanf("%d %d %d", &diaFim, &mesFim, &anoFim);
+        if (!validaData(diaFim, mesFim, anoFim)) {
+            printf("❌ Data inválida! Tente novamente.\n\n");
+        }
+        
+        // Validar se a data final é posterior à inicial
+        if (compararDatas(diaFim, mesFim, anoFim, diaInicio, mesInicio, anoInicio) < 0) {
+            printf("❌ Data final deve ser posterior à inicial!\n\n");
+        }
+    } while (!validaData(diaFim, mesFim, anoFim) ||
+             compararDatas(diaFim, mesFim, anoFim, diaInicio, mesInicio, anoInicio) < 0);
+    
+    // Array para armazenar dados (máximo 365 dias)
+    DadosDiario dados[365];
+    int numDias = 0;
+    
+    // Ler ficheiro e processar
+    FILE *f = fopen(ficheiroEstacionamentos, "r");
+    if (f == NULL) {
+        printf("\n❌ Erro ao abrir ficheiro!\n");
+        return;
+    }
+    
+    // Carregar tarifas
+    Tarifa tarifas[MAX_TARIFAS];
+    int numTarifas = 0;
+    lertarifas(tarifas, &numTarifas);
+    
+    estacionamento E;
+    float preco;
+    
+    // Ler todos os registos
+    while (fscanf(f, "%d %s %d %d %d %d %d %s %d %d %d %d %d %f",
+                  &E.numE, E.matricula,
+                  &E.anoE, &E.mesE, &E.diaE, &E.horaE, &E.minE,
+                  E.lugar,
+                  &E.anoS, &E.mesS, &E.diaS, &E.horaS, &E.minS,
+                  &preco) == 14) {
+        
+        // Só considerar registos com saída (anoS != 0)
+        if (E.anoS != 0) {
+            // Verificar se data de saída está no intervalo
+            if (dataNoIntervalo(E.diaS, E.mesS, E.anoS,
+                               diaInicio, mesInicio, anoInicio,
+                               diaFim, mesFim, anoFim)) {
+                
+                // Procurar se o dia já existe na tabela
+                int encontrado = 0;
+                for (int i = 0; i < numDias; i++) {
+                    if (dados[i].dia == E.diaS && dados[i].mes == E.mesS) {
+                        dados[i].totalSaidas++;
+                        dados[i].totalValor += preco;
+                        encontrado = 1;
+                        break;
+                    }
+                }
+                
+                // Se não encontrou, adicionar novo dia
+                if (!encontrado && numDias < 365) {
+                    dados[numDias].dia = E.diaS;
+                    dados[numDias].mes = E.mesS;
+                    dados[numDias].totalSaidas = 1;
+                    dados[numDias].totalValor = preco;
+                    numDias++;
+                }
+            }
+        }
+    }
+    fclose(f);
+    
+    if (numDias == 0) {
+        printf("\n⚠️  Não há dados para o intervalo especificado!\n");
+        printf("Pressione ENTER para continuar...");
+        getchar();
+        getchar();
+        return;
+    }
+    
+    // Ordenar dados por data
+    for (int i = 0; i < numDias - 1; i++) {
+        for (int j = 0; j < numDias - i - 1; j++) {
+            if (compararDatas(dados[j].dia, dados[j].mes, anoInicio,
+                             dados[j+1].dia, dados[j+1].mes, anoInicio) > 0) {
+                DadosDiario temp = dados[j];
+                dados[j] = dados[j+1];
+                dados[j+1] = temp;
+            }
+        }
+    }
+    
+    // Exibir tabela dinâmica
+    system("cls");
+    printf("\n");
+    printf("╔═══════════════════════════════════════════════════════════╗\n");
+    printf("║          📊 TABELA DINÂMICA - SAÍDAS POR DATA            ║\n");
+    printf("║  Período: %02d/%02d/%d a %02d/%02d/%d                      ║\n",
+           diaInicio, mesInicio, anoInicio, diaFim, mesFim, anoFim);
+    printf("╚═══════════════════════════════════════════════════════════╝\n\n");
+    
+    printf("┌──────────────┬───────────────┬──────────────────┐\n");
+    printf("│     DATA     │   SAÍDAS      │   VALOR TOTAL    │\n");
+    printf("├──────────────┼───────────────┼──────────────────┤\n");
+    
+    float totalGeralValor = 0.0;
+    int totalGeralSaidas = 0;
+    
+    for (int i = 0; i < numDias; i++) {
+        printf("│ %02d/%02d/%d   │      %4d      │     %.2f €       │\n",
+               dados[i].dia, dados[i].mes, anoInicio,
+               dados[i].totalSaidas,
+               dados[i].totalValor);
+        
+        totalGeralSaidas += dados[i].totalSaidas;
+        totalGeralValor += dados[i].totalValor;
+    }
+    
+    printf("├──────────────┼───────────────┼──────────────────┤\n");
+    printf("│   TOTAL      │      %4d      │     %.2f €       │\n",
+           totalGeralSaidas, totalGeralValor);
+    printf("└──────────────┴───────────────┴──────────────────┘\n");
+    
+    // Média
+    float media = (numDias > 0) ? (totalGeralValor / numDias) : 0.0;
+    printf("\n📈 Valor médio por dia: %.2f €\n", media);
+    printf("📊 Total de dias com saídas: %d\n", numDias);
+    printf("🚗 Total de saídas: %d\n\n", totalGeralSaidas);
+    
+    // Opção para gravar em ficheiro
+    char opcao;
+    printf("╔═══════════════════════════════════════════════════════════╗\n");
+    printf("║  [G] Gravar em TXT    [C] Gravar em CSV    [0] Voltar   ║\n");
+    printf("╚═══════════════════════════════════════════════════════════╝\n");
+    printf("\nOpção: ");
+    scanf(" %c", &opcao);
+    
+    if (opcao == 'G' || opcao == 'g') {
+        char nomeArq[100];
+        printf("\nNome do ficheiro (sem extensão): ");
+        scanf("%s", nomeArq);
+        strcat(nomeArq, ".txt");
+        
+        FILE *fout = fopen(nomeArq, "w");
+        if (fout == NULL) {
+            printf("❌ Erro ao criar ficheiro!\n");
+            return;
+        }
+        
+        fprintf(fout, "TABELA DINÂMICA - SAÍDAS POR DATA\n");
+        fprintf(fout, "Período: %02d/%02d/%d a %02d/%02d/%d\n\n",
+                diaInicio, mesInicio, anoInicio, diaFim, mesFim, anoFim);
+        fprintf(fout, "DATA         | SAÍDAS    | VALOR TOTAL\n");
+        fprintf(fout, "─────────────┼───────────┼─────────────\n");
+        
+        for (int i = 0; i < numDias; i++) {
+            fprintf(fout, "%02d/%02d/%d   |    %4d   |   %.2f €\n",
+                   dados[i].dia, dados[i].mes, anoInicio,
+                   dados[i].totalSaidas,
+                   dados[i].totalValor);
+        }
+        
+        fprintf(fout, "─────────────┼───────────┼─────────────\n");
+        fprintf(fout, "TOTAL        |    %4d   |   %.2f €\n\n",
+                totalGeralSaidas, totalGeralValor);
+        fprintf(fout, "Valor médio por dia: %.2f €\n", media);
+        
+        fclose(fout);
+        printf("\n✅ Ficheiro '%s' gravado com sucesso!\n", nomeArq);
+    }
+    else if (opcao == 'C' || opcao == 'c') {
+        char nomeArq[100];
+        char separador;
+        
+        printf("\nNome do ficheiro (sem extensão): ");
+        scanf("%s", nomeArq);
+        strcat(nomeArq, ".csv");
+        
+        printf("Separador (vírgula ou ponto-e-vírgula)? (,;): ");
+        scanf(" %c", &separador);
+        
+        FILE *fout = fopen(nomeArq, "w");
+        if (fout == NULL) {
+            printf("❌ Erro ao criar ficheiro!\n");
+            return;
+        }
+        
+        fprintf(fout, "Data%cSaidas%cValor_Total\n", separador, separador);
+        
+        for (int i = 0; i < numDias; i++) {
+            fprintf(fout, "%02d/%02d/%d%c%d%c%.2f\n",
+                   dados[i].dia, dados[i].mes, anoInicio,
+                   separador,
+                   dados[i].totalSaidas,
+                   separador,
+                   dados[i].totalValor);
+        }
+        
+        fclose(fout);
+        printf("\n✅ Ficheiro '%s' gravado com sucesso!\n", nomeArq);
+    }
+    
+    printf("\nPressione ENTER para continuar...");
+    getchar();
+    getchar();
 }
