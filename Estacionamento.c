@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "Estacionamento.h"
+#include "Listagens.h"
 #include "validacoes.h"
 #include "Tarifas.h"
+#include "Util.h"
 #include "GestaoLugares.h"
 int validaData(int dia, int mes, int ano);
 int validamatricula(char *mat);
@@ -174,6 +176,8 @@ void gerarficheiroocupacao(char *ficheirovalido, char *ficheiroocupacao,
     
     if (f_val == NULL || f_ocup == NULL) {
         printf("Erro ao abrir ficheiros para gerar ocupacao.\n");
+        if (f_val) fclose(f_val);
+        if (f_ocup) fclose(f_ocup);
         return;
     }
         
@@ -188,10 +192,22 @@ void gerarficheiroocupacao(char *ficheirovalido, char *ficheiroocupacao,
                   &E.anoS, &E.mesS, &E.diaS, &E.horaS, &E.minS,
                   &preco) == 14) {
         
-        int entrouAntesOuIgual = ComparaDatas(E.diaE, E.mesE, E.anoE, E.horaE, E.minE, diaU, mesU, anoU, horaU, minU) <= 0;
-        int saiuDepoisOuIgual = ComparaDatas(E.diaS, E.mesS, E.anoS, E.horaS, E.minS, diaU, mesU, anoU, horaU, minU) >= 0;
+        // Verificar se entrou antes ou na data/hora consultada
+        int entrouAntesOuIgual = ComparaDatas(E.diaE, E.mesE, E.anoE, E.horaE, E.minE,
+                                               diaU, mesU, anoU, horaU, minU) <= 0;
+        
+        // ✨ CORREÇÃO: Se ainda não saiu (anoS = 0), considerar que está no parque
+        int aindaNoParque = (E.anoS == 0);
+        
+        // Se saiu, verificar se foi depois da data consultada
+        int saiuDepoisOuIgual = 0;
+        if (!aindaNoParque) {
+            saiuDepoisOuIgual = ComparaDatas(E.diaS, E.mesS, E.anoS, E.horaS, E.minS,
+                                             diaU, mesU, anoU, horaU, minU) >= 0;
+        }
 
-        if (entrouAntesOuIgual && saiuDepoisOuIgual) {
+        // Está ocupado se: entrou antes E (ainda não saiu OU saiu depois)
+        if (entrouAntesOuIgual && (aindaNoParque || saiuDepoisOuIgual)) {
             fprintf(f_ocup, "%d %s %d %d %d %d %d %s %d %d %d %d %d\n",
                     novonum, E.matricula,
                     E.anoE, E.mesE, E.diaE, E.horaE, E.minE,
@@ -200,10 +216,12 @@ void gerarficheiroocupacao(char *ficheirovalido, char *ficheiroocupacao,
             novonum++;
         }
     }
+    
     fclose(f_val);
     fclose(f_ocup);
+    
+    printf("DEBUG: %d veículos ocupando lugares no momento consultado.\n", novonum - 1);
 }
-
 // ============================================================
 // FUNÇÃO AUXILIAR: Verificar se carro já está no parque
 // ============================================================
@@ -348,6 +366,56 @@ int lugarOcupadoNaData(char *lugar, int diaCheck, int mesCheck, int anoCheck,
     
     fclose(f);
     return 0;
+}
+
+// ============================================================
+// FUNÇÃO AUXILIAR: Atribuir lugar automático
+// ============================================================
+char* atribuirLugar(Confparque config, char *ficheiroEstacionamentos) {
+    // Criar array para marcar lugares ocupados
+    static char lugarAtribuido[10];
+    int ocupados[MAX_PISOS][MAX_FILAS][MAX_LUGARES] = {0};
+    
+    // Ler ficheiro e marcar lugares ocupados
+    FILE *f = fopen(ficheiroEstacionamentos, "r");
+    if (f != NULL) {
+        estacionamento E;
+        
+        // ✅ CORRIGIDO: Ler apenas 13 campos (SEM preço)
+        while (fscanf(f, "%d %s %d %d %d %d %d %s %d %d %d %d %d",
+                      &E.numE, E.matricula,
+                      &E.anoE, &E.mesE, &E.diaE, &E.horaE, &E.minE,
+                      E.lugar,
+                      &E.anoS, &E.mesS, &E.diaS, &E.horaS, &E.minS) == 13)
+        {
+            // Se ainda não saiu (anoS = 0), marcar como ocupado
+            if (E.anoS == 0) {
+                int piso, fila, numero;
+                ProcessarLugar(E.lugar, &piso, &fila, &numero);
+                ocupados[piso-1][fila][numero-1] = 1;
+            }
+        }
+        fclose(f);
+    }
+    
+    // Procurar primeiro lugar livre (ordem: piso -> fila -> número)
+    for (int p = 0; p < config.numpisos; p++) {
+        for (int f = 0; f < config.numfilas; f++) {
+            for (int l = 0; l < config.numlugares; l++) {
+                if (ocupados[p][f][l] == 0) {
+                    // Encontrou lugar livre!
+                    sprintf(lugarAtribuido, "%d%c%d",
+                            p+1,           // Piso (1-5)
+                            'A' + f,       // Fila (A-Z)
+                            l+1);          // Número (1-50)
+                    return lugarAtribuido;
+                }
+            }
+        }
+    }
+    
+    // Sem lugares livres
+    return NULL;
 }
 
 // ============================================================
@@ -998,3 +1066,420 @@ void mostrarRecibo(int numE, char *matricula, char *lugar,
     printf("╚═══════════════════════════════════════════════════════════╝\n");
 }
 
+int registarEntradaAutomatica(Confparque config, char *ficheiroEstacionamentos) {
+    estacionamento novoEstac;
+    char matriculaTemp[10];
+    int dia, mes, ano, hora, min;
+    int carroJaNoParque = 0;
+    
+    // ✨ OBTER DATA/HORA AUTOMÁTICA
+    obterDataHoraAtual(&dia, &mes, &ano, &hora, &min);
+    
+    printf("\n╔═══════════════════════════════════════════════════════════╗\n");
+    printf("║              ➕ REGISTAR ENTRADA DE VEÍCULO               ║\n");
+    printf("╚═══════════════════════════════════════════════════════════╝\n\n");
+    
+    printf("📅 Data/Hora atual: %02d/%02d/%d às %02d:%02d\n\n",
+           dia, mes, ano, hora, min);
+    
+    // ========== PEDIR MATRÍCULA ==========
+    do {
+        printf("🚗 Matrícula do veículo (XX-XX-XX): ");
+        scanf("%s", matriculaTemp);
+        
+        if (!validamatricula(matriculaTemp)) {
+            printf("❌ Matrícula inválida! Formato correto: XX-XX-XX\n\n");
+            continue;
+        }
+        
+        if (verificarCarroNoParque(matriculaTemp, "estacionamentos.txt")) {
+            printf("❌ ERRO: O veículo %s já se encontra no parque!\n", matriculaTemp);
+            printf("   Por favor, verifique a matrícula ou registe a saída primeiro.\n\n");
+            carroJaNoParque = 1;
+        } else {
+            carroJaNoParque = 0;
+        }
+        
+    } while (!validamatricula(matriculaTemp) || carroJaNoParque);
+    
+    char *lugarAtribuido = atribuirLugar(config, "estacionamentos.txt");
+    
+    if (lugarAtribuido == NULL) {
+        printf("\n❌ ERRO: Não há lugares disponíveis no parque!\n");
+        return 0;
+    }
+    
+    // ========== PREENCHER ESTRUTURA ==========
+    novoEstac.numE = obterProximoNumeroEntrada("estacionamentos.txt");
+    novoEstac.numValidado = obterProximoNumeroValidado("estacionamentos_validos.txt");
+    
+    strcpy(novoEstac.matricula, matriculaTemp);
+    novoEstac.anoE = ano;
+    novoEstac.mesE = mes;
+    novoEstac.diaE = dia;
+    novoEstac.horaE = hora;
+    novoEstac.minE = min;
+    strcpy(novoEstac.lugar, lugarAtribuido);
+    
+    // Data de saída = 0 (ainda não saiu)
+    novoEstac.anoS = 0;
+    novoEstac.mesS = 0;
+    novoEstac.diaS = 0;
+    novoEstac.horaS = 0;
+    novoEstac.minS = 0;
+    
+    // ========== GRAVAR NO FICHEIRO BASE ==========
+    FILE *f = fopen("estacionamentos.txt", "a");
+    
+    if (f == NULL) {
+        printf("❌ ERRO: Não foi possível abrir o ficheiro!\n");
+        return 0;
+    }
+    
+    fprintf(f, "%d\t%s\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%d\t%d\t%d\t%d\n",
+            novoEstac.numE,
+            novoEstac.matricula,
+            novoEstac.anoE, novoEstac.mesE, novoEstac.diaE,
+            novoEstac.horaE, novoEstac.minE,
+            novoEstac.lugar,
+            novoEstac.anoS, novoEstac.mesS, novoEstac.diaS,
+            novoEstac.horaS, novoEstac.minS);
+    
+    fclose(f);
+    
+    // ========== GRAVAR NO FICHEIRO VALIDADO ==========
+    f = fopen("estacionamentos_validos.txt", "a");
+    
+    if (f == NULL) {
+        printf("❌ ERRO: Não foi possível abrir o ficheiro validado!\n");
+        return 0;
+    }
+    
+    fprintf(f, "%d %s %d %d %d %d %d %s %d %d %d %d %d %.2f\n",
+            novoEstac.numValidado,
+            novoEstac.matricula,
+            novoEstac.anoE, novoEstac.mesE, novoEstac.diaE,
+            novoEstac.horaE, novoEstac.minE,
+            novoEstac.lugar,
+            novoEstac.anoS, novoEstac.mesS, novoEstac.diaS,
+            novoEstac.horaS, novoEstac.minS,
+            0.00);
+    
+    fclose(f);
+    
+    // ========== MOSTRAR TICKET ==========
+    printf("\n✅ Entrada registada com sucesso!\n");
+    mostrarTicket(novoEstac);
+    
+    return 1;
+}
+
+int registarSaidaAutomatica(Confparque config, char *ficheiroEstacionamentos) {
+    char matriculaProcurada[10];
+    int dia, mes, ano, hora, min;
+    int encontrado = 0;
+    
+    // ✨ OBTER DATA/HORA AUTOMÁTICA
+    obterDataHoraAtual(&dia, &mes, &ano, &hora, &min);
+    
+    printf("\n╔═══════════════════════════════════════════════════════════╗\n");
+    printf("║              ➖ REGISTAR SAÍDA DE VEÍCULO                ║\n");
+    printf("╚═══════════════════════════════════════════════════════════╝\n\n");
+    
+    printf("📅 Data/Hora atual: %02d/%02d/%d às %02d:%02d\n\n",
+           dia, mes, ano, hora, min);
+    
+    // ========== PEDIR MATRÍCULA ==========
+    do {
+        printf("🚗 Matrícula do veículo (XX-XX-XX): ");
+        scanf("%s", matriculaProcurada);
+        
+        if (!validamatricula(matriculaProcurada)) {
+            printf("❌ Matrícula inválida! Formato correto: XX-XX-XX\n\n");
+        }
+    } while (!validamatricula(matriculaProcurada));
+    
+    // ========== VERIFICAR SE ESTÁ NO PARQUE ==========
+    FILE *f = fopen("estacionamentos.txt", "r");
+    if (f == NULL) {
+        printf("❌ ERRO: Não foi possível abrir o ficheiro!\n");
+        return 0;
+    }
+    
+    estacionamento E;
+    
+    while (fscanf(f, "%d %s %d %d %d %d %d %s %d %d %d %d %d",
+                  &E.numE, E.matricula,
+                  &E.anoE, &E.mesE, &E.diaE, &E.horaE, &E.minE,
+                  E.lugar,
+                  &E.anoS, &E.mesS, &E.diaS, &E.horaS, &E.minS) == 13)
+    {
+        if (strcmp(E.matricula, matriculaProcurada) == 0 && E.anoS == 0) {
+            encontrado = 1;
+            break;
+        }
+    }
+    fclose(f);
+    
+    if (!encontrado) {
+        printf("\n❌ ERRO: O veículo %s não se encontra no parque!\n", matriculaProcurada);
+        printf("   Verifique se a matrícula está correta.\n");
+        return 0;
+    }
+    
+    // ========== MOSTRAR INFO DA ENTRADA ==========
+    printf("\n✅ Veículo encontrado no parque!\n");
+    printf("┌────────────────────────────────────────────┐\n");
+    printf("│ INFORMAÇÃO DO ESTACIONAMENTO                │\n");
+    printf("├────────────────────────────────────────────┤\n");
+    printf("│ Nº Entrada: %-6d                         │\n", E.numE);
+    printf("│ Matrícula:  %-10s                       │\n", E.matricula);
+    printf("│ Lugar:      %-5s                          │\n", E.lugar);
+    printf("│ Entrada:    %02d/%02d/%d às %02d:%02d           │\n",
+           E.diaE, E.mesE, E.anoE, E.horaE, E.minE);
+    printf("└────────────────────────────────────────────┘\n\n");
+    
+    // ========== VALIDAR QUE SAÍDA É DEPOIS DA ENTRADA ==========
+    if (!validaEantesS(E.diaE, E.mesE, E.anoE, E.horaE, E.minE,
+                       dia, mes, ano, hora, min)) {
+        printf("\n❌ ERRO: A data/hora atual é anterior à entrada!\n");
+        printf("   Entrada: %02d/%02d/%d às %02d:%02d\n", E.diaE, E.mesE, E.anoE, E.horaE, E.minE);
+        printf("   Atual:   %02d/%02d/%d às %02d:%02d\n", dia, mes, ano, hora, min);
+        return 0;
+    }
+    
+    // ========== ATUALIZAR O FICHEIRO ==========
+    FILE *f_temp = fopen("temp_estacionamentos.txt", "w");
+    if (f_temp == NULL) {
+        printf("❌ ERRO: Não foi possível criar ficheiro temporário!\n");
+        return 0;
+    }
+    
+    f = fopen("estacionamentos.txt", "r");
+    if (f == NULL) {
+        printf("❌ ERRO: Não foi possível reabrir o ficheiro!\n");
+        fclose(f_temp);
+        return 0;
+    }
+    
+    // Copiar todos os registos, atualizando o correto
+    while (fscanf(f, "%d %s %d %d %d %d %d %s %d %d %d %d %d",
+                  &E.numE, E.matricula,
+                  &E.anoE, &E.mesE, &E.diaE, &E.horaE, &E.minE,
+                  E.lugar,
+                  &E.anoS, &E.mesS, &E.diaS, &E.horaS, &E.minS) == 13)
+    {
+        if (strcmp(E.matricula, matriculaProcurada) == 0 && E.anoS == 0) {
+            fprintf(f_temp, "%d\t%s\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%d\t%d\t%d\t%d\n",
+                    E.numE, E.matricula,
+                    E.anoE, E.mesE, E.diaE, E.horaE, E.minE,
+                    E.lugar,
+                    ano, mes, dia, hora, min);
+        } else {
+            fprintf(f_temp, "%d\t%s\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%d\t%d\t%d\t%d\n",
+                    E.numE, E.matricula,
+                    E.anoE, E.mesE, E.diaE, E.horaE, E.minE,
+                    E.lugar,
+                    E.anoS, E.mesS, E.diaS, E.horaS, E.minS);
+        }
+    }
+    
+    fclose(f);
+    fclose(f_temp);
+    
+    remove("estacionamentos.txt");
+    rename("temp_estacionamentos.txt", "estacionamentos.txt");
+    
+    // ========== CALCULAR PREÇO ==========
+    Tarifa tarifas[MAX_TARIFAS];
+    int numTarifas = 0;
+    
+    if (!lertarifas(tarifas, &numTarifas)) {
+        printf("❌ ERRO: Não foi possível carregar as tarifas!\n");
+        return 0;
+    }
+    
+    float precoPagar = CalcularPreco(E.diaE, E.mesE, E.anoE, E.horaE, E.minE,
+                                     dia, mes, ano, hora, min,
+                                     tarifas, numTarifas);
+    
+    // ========== MOSTRAR RECIBO ==========
+    printf("\n✅ Saída registada com sucesso!\n");
+    mostrarRecibo(E.numE, matriculaProcurada, E.lugar,
+                  E.diaE, E.mesE, E.anoE, E.horaE, E.minE,
+                  dia, mes, ano, hora, min,
+                  precoPagar);
+    
+    return 1;
+}
+
+void MostrarMapaOcupacao_Paginado(Confparque config, char *ficheiroOcupacao,
+                                   Lugar mapa[][MAX_FILAS][MAX_LUGARES]) {
+    
+    printf("\n📍 MAPA DE OCUPAÇÃO DO PARQUE (PAGINADO)\n");
+    printf("═══════════════════════════════════════════\n\n");
+    
+    // 1. Inicializar tudo como livre
+    InicializarMapa(mapa, config);
+    
+    // 2. Carregar lugares indisponíveis
+    carregarLugaresIndisponiveis(mapa, config);
+    
+    // 3. Ler ficheiro e marcar ocupados
+    PreencherMapaComOcupacoes(mapa, ficheiroOcupacao);
+    
+    // 4. Inicializar paginação (1 piso por página)
+    ControlePaginacao ctrl = inicializarPaginacao(config.numpisos, 1);
+    
+    char opcao;
+    do {
+        system("cls");
+        printf("\n");
+        printf("╔═══════════════════════════════════════════════════════════╗\n");
+        printf("║                 MAPA DE OCUPAÇÃO DO PARQUE                ║\n");
+        printf("╚═══════════════════════════════════════════════════════════╝\n\n");
+        
+        // Calcular qual piso mostrar (página atual - 1 = índice do piso)
+        int pisoAtual = ctrl.paginaAtual - 1;
+        
+        // Desenhar apenas o piso atual
+        printf("╔═══════════════════════════════════════════════════════════╗\n");
+        printf("║                      PISO %d                               ║\n", pisoAtual + 1);
+        printf("╚═══════════════════════════════════════════════════════════╝\n\n");
+        
+        // Cabeçalho com números dos lugares
+        printf("    ");
+        for (int lugar = 0; lugar < config.numlugares; lugar++) {
+            printf("%2d ", lugar + 1);
+        }
+        printf("\n");
+        
+        printf("    ");
+        for (int lugar = 0; lugar < config.numlugares; lugar++) {
+            printf("───");
+        }
+        printf("\n");
+        
+        // Desenhar cada fila do piso
+        for (int fila = 0; fila < config.numfilas; fila++) {
+            char letraFila = 'A' + fila;
+            printf(" %c │ ", letraFila);
+            
+            for (int lugar = 0; lugar < config.numlugares; lugar++) {
+                char status = mapa[pisoAtual][fila][lugar].status;
+                printf("%c  ", status);
+            }
+            printf("\n");
+        }
+        printf("\n");
+        
+        // Calcular estatísticas do piso
+        int totalLugaresPiso = config.numfilas * config.numlugares;
+        int ocupados = 0;
+        int indisponiveis = 0;
+        
+        for (int f = 0; f < config.numfilas; f++) {
+            for (int l = 0; l < config.numlugares; l++) {
+                char status = mapa[pisoAtual][f][l].status;
+                if (status == 'X') {
+                    ocupados++;
+                } else if (status == 'i' || status == 'o' ||
+                          status == 'r' || status == 'm') {
+                    indisponiveis++;
+                }
+            }
+        }
+        
+        int livres = totalLugaresPiso - ocupados - indisponiveis;
+        float percentagem = (ocupados * 100.0) / totalLugaresPiso;
+        
+        // Informações do piso
+        printf("┌─────────────────────────────────────────┐\n");
+        printf("│      ESTATÍSTICAS - PISO %d              │\n", pisoAtual + 1);
+        printf("├─────────────────────────────────────────┤\n");
+        printf("│ Total de lugares: %d                    │\n", totalLugaresPiso);
+        printf("│ Ocupados: %d  |  Livres: %d  |  Indispon: %d │\n",
+               ocupados, livres, indisponiveis);
+        printf("│ Taxa de ocupação: %.1f%%                    │\n", percentagem);
+        printf("└─────────────────────────────────────────┘\n");
+        
+        // Barra de navegação
+        printf("\n");
+        printf("╔═══════════════════════════════════════════════════════════╗\n");
+        printf("║  Piso %d de %d                                            ║\n",
+               ctrl.paginaAtual, ctrl.totalPaginas);
+        printf("╠═══════════════════════════════════════════════════════════╣\n");
+        printf("║  [N] Próximo piso       [P] Piso anterior                ║\n");
+        printf("║  [I] Ir para piso...    [0] Voltar ao menu              ║\n");
+        printf("╚═══════════════════════════════════════════════════════════╝\n");
+        printf("\nOpção: ");
+        scanf(" %c", &opcao);
+        
+        switch (opcao) {
+            case 'N':
+            case 'n':
+                if (ctrl.paginaAtual < ctrl.totalPaginas) {
+                    ctrl.paginaAtual++;
+                } else {
+                    printf("\n⚠️  Já está no último piso!\n");
+                    printf("Pressione ENTER para continuar...");
+                    getchar();
+                    getchar();
+                }
+                break;
+                
+            case 'P':
+            case 'p':
+                if (ctrl.paginaAtual > 1) {
+                    ctrl.paginaAtual--;
+                } else {
+                    printf("\n⚠️  Já está no primeiro piso!\n");
+                    printf("Pressione ENTER para continuar...");
+                    getchar();
+                    getchar();
+                }
+                break;
+                
+            case 'I':
+            case 'i': {
+                int pisoProcurado;
+                printf("\nQual piso deseja visualizar? (1 a %d): ", config.numpisos);
+                scanf("%d", &pisoProcurado);
+                
+                if (pisoProcurado >= 1 && pisoProcurado <= config.numpisos) {
+                    ctrl.paginaAtual = pisoProcurado;
+                } else {
+                    printf("⚠️  Piso inválido!\n");
+                    printf("Pressione ENTER para continuar...");
+                    getchar();
+                    getchar();
+                }
+                break;
+            }
+                
+            case '0':
+                break;
+                
+            default:
+                printf("\n❌ Opção inválida!\n");
+                printf("Pressione ENTER para continuar...");
+                getchar();
+                getchar();
+        }
+        
+    } while (opcao != '0');
+}
+
+// Legenda (pode ser mostrada uma única vez no início ou ao fim)
+void MostrarLegendaMapa(void) {
+    printf("\n╔═══════════════════════════════════════════════════════════╗\n");
+    printf("║                        LEGENDA                            ║\n");
+    printf("╠═══════════════════════════════════════════════════════════╣\n");
+    printf("║  -  = Lugar Livre                                         ║\n");
+    printf("║  X  = Lugar Ocupado                                       ║\n");
+    printf("║  i  = Condições inadequadas                               ║\n");
+    printf("║  o  = Objeto de obras                                     ║\n");
+    printf("║  r  = Reservado                                           ║\n");
+    printf("║  m  = Outros motivos                                      ║\n");
+    printf("╚═══════════════════════════════════════════════════════════╝\n");
+}
