@@ -11,6 +11,7 @@
 #include "GestaoLugares.h"
 #include "Listagens.h"
 
+//Esta função é chamada diversas vezes ao longo do codigo, o seu objetivo é mostrar o menu principal, e depois, nos cases, chamar as funcoes de cada uma das opcoes.
 void mostrarMenu(void) {
     int op1;
     int diaU, mesU, anoU, horaU, minU;
