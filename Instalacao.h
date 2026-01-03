@@ -7,6 +7,8 @@
 #define MAX_LUGARES 50
 #define Ficheiro_config "ficheiroconf.txt"
 #define MAX_REG_EST 100000
+
+//Estrutura que guarda a configuração do parque definida pelo utilizador na primeira utilização da aplicação (ou depois de uma reconfiguração)
 typedef struct{
     int numpisos, numfilas, numlugares;
     char Nomempresa[50], Nominstal[50];
