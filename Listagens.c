@@ -13,6 +13,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+
+// função para iniciar a paginacao
 ControlePaginacao inicializarPaginacao(int totalRegistos, int registosPorPag) {
     ControlePaginacao ctrl;
 
@@ -29,6 +31,8 @@ ControlePaginacao inicializarPaginacao(int totalRegistos, int registosPorPag) {
     return ctrl;
 }
 
+//funcao que mostra ao utilizador as opcoes, juntamente com a pagina onde está, o total de paginas, a quantidade de registos/registos por pagina
+// porteriormente, em outra funcao, temos os cases das opcoes
 void mostrarBarraNavegacao(ControlePaginacao ctrl) {
     printf("\n");
     printf("╔═══════════════════════════════════════════════════════════╗\n");
@@ -44,15 +48,16 @@ void mostrarBarraNavegacao(ControlePaginacao ctrl) {
     printf("╚═══════════════════════════════════════════════════════════╝\n");
 }
 
+//guarda a listagem que o utilizador dejesa ver num novo ficheiro .txt
 void gravarListagemTXT(estacionamento est[], int numRegistos, char *nomeFicheiro) {
     if (numRegistos == 0) {
-        printf("\n❌ Não há registos para gravar!\n");
+        printf("\n Não há registos para gravar!\n");
         return;
     }
 
-    FILE *f = fopen(nomeFicheiro, "w");
+    FILE *f = fopen(nomeFicheiro, "w"); //abrir o novo ficheiro em formato de escrita
     if (f == NULL) {
-        printf("\n❌ Erro ao criar ficheiro!\n");
+        printf("\n Erro ao criar ficheiro!\n");
         return;
     }
 
@@ -66,7 +71,7 @@ void gravarListagemTXT(estacionamento est[], int numRegistos, char *nomeFicheiro
 
     // Dados
     for (int i = 0; i < numRegistos; i++) {
-        if (est[i].anoS == 0) {
+        if (est[i].anoS == 0) { //se o anoS (ano de saida) for 0
             // Ainda no parque
             fprintf(f, "%-6d | %-10s | %-5s | %02d/%02d/%d %02d:%02d | NO PARQUE        | -\n",
                     est[i].numE, est[i].matricula, est[i].lugar,
@@ -92,7 +97,7 @@ void gravarListagemTXT(estacionamento est[], int numRegistos, char *nomeFicheiro
     printf("\n Listagem gravada em '%s'\n", nomeFicheiro);
 }
 
-
+//guarda a listagem num ficheiro .csv
 void gravarListagemCSV(estacionamento est[], int numRegistos, char *nomeFicheiro) {
     if (numRegistos == 0) {
         printf("\n Não há registos para gravar!\n");
@@ -105,12 +110,12 @@ void gravarListagemCSV(estacionamento est[], int numRegistos, char *nomeFicheiro
 
     if (separador != ',' && separador != ';') {
         separador = ';';
-        printf("  Usando ; como separador padrão\n");
+        printf("  Utilizando ; como separador padrão\n");
     }
 
     FILE *f = fopen(nomeFicheiro, "w");
     if (f == NULL) {
-        printf("\n❌ Erro ao criar ficheiro!\n");
+        printf("\n Erro ao criar ficheiro!\n");
         return;
     }
 
@@ -146,8 +151,9 @@ void gravarListagemCSV(estacionamento est[], int numRegistos, char *nomeFicheiro
     printf("\n Listagem CSV gravada em '%s'\n", nomeFicheiro);
 }
 
-void listarTodosEstacionamentos(char *ficheiroEstacionamentos) {
     // Carregar todos os estacionamentos
+void listarTodosEstacionamentos(char *ficheiroEstacionamentos) {
+
     estacionamento est[MAX_REG_EST];
     int numTotal = 0;
 
@@ -157,7 +163,7 @@ void listarTodosEstacionamentos(char *ficheiroEstacionamentos) {
         return;
     }
 
-    // ✅ CORREÇÃO: Ler o formato correto (14 campos, incluindo preço)
+    //lê todos os dados, se nao existirem exatamente 14 para
     while (fscanf(f, "%d %s %d %d %d %d %d %s %d %d %d %d %d %f",
                   &est[numTotal].numE, est[numTotal].matricula,
                   &est[numTotal].anoE, &est[numTotal].mesE, &est[numTotal].diaE,
@@ -167,7 +173,7 @@ void listarTodosEstacionamentos(char *ficheiroEstacionamentos) {
                   &est[numTotal].horaS, &est[numTotal].minS,
                   &est[numTotal].valorPago) == 14) {
 
-        // Se já saiu mas não tem preço calculado, calcular
+        // Se já saiu mas não tem preço calculado, calcular o preço
         if (est[numTotal].anoS != 0 && est[numTotal].valorPago == 0.0) {
             Tarifa tarifas[MAX_TARIFAS];
             int numTarifas = 0;
@@ -186,6 +192,7 @@ void listarTodosEstacionamentos(char *ficheiroEstacionamentos) {
     }
     fclose(f);
 
+    
     if (numTotal == 0) {
         printf("\n  Não há estacionamentos registados!\n");
         printf("Pressione ENTER para continuar...");
@@ -194,14 +201,14 @@ void listarTodosEstacionamentos(char *ficheiroEstacionamentos) {
         return;
     }
 
-    printf("\n✅ Total de registos carregados: %d\n", numTotal);
+    printf("\n Total de registos carregados: %d\n", numTotal);
 
     // Inicializar paginação (15 registos por página)
     ControlePaginacao ctrl = inicializarPaginacao(numTotal, 15);
 
     char opcao;
     do {
-        system("cls");
+        system("cls"); //Limpa ecra
         printf("\n");
         printf("╔═══════════════════════════════════════════════════════════╗\n");
         printf("║              LISTAGEM DE TODOS OS ESTACIONAMENTOS         ║\n");
@@ -241,10 +248,10 @@ void listarTodosEstacionamentos(char *ficheiroEstacionamentos) {
         mostrarBarraNavegacao(ctrl);
         printf("\nOpção: ");
         scanf(" %c", &opcao);
-
+//o swich para todas as opcoes demonstradas na barra de navegação (Todas as outras listagens sem um logica igual ou parecida para as suas opcoes)
         switch (opcao) {
             case 'N':
-            case 'n':
+            case 'n': //ir para a pagina seguinte
                 if (ctrl.paginaAtual < ctrl.totalPaginas) {
                     ctrl.paginaAtual++;
                 } else {
@@ -256,7 +263,7 @@ void listarTodosEstacionamentos(char *ficheiroEstacionamentos) {
                 break;
 
             case 'P':
-            case 'p':
+            case 'p': // ir para a pagina anterior
                 if (ctrl.paginaAtual > 1) {
                     ctrl.paginaAtual--;
                 } else {
@@ -268,7 +275,7 @@ void listarTodosEstacionamentos(char *ficheiroEstacionamentos) {
                 break;
 
             case 'G':
-            case 'g':
+            case 'g': //guardar dados em txt
                 gravarListagemTXT(est, numTotal, "listagem_completa.txt");
                 printf("Pressione ENTER para continuar...");
                 getchar();
@@ -276,7 +283,7 @@ void listarTodosEstacionamentos(char *ficheiroEstacionamentos) {
                 break;
 
             case 'C':
-            case 'c':
+            case 'c': //guardar em csv
                 gravarListagemCSV(est, numTotal, "listagem_completa.csv");
                 printf("Pressione ENTER para continuar...");
                 getchar();
@@ -296,6 +303,7 @@ void listarTodosEstacionamentos(char *ficheiroEstacionamentos) {
     } while (opcao != '0');
 }
 
+//listagem por data
 void listarPorData(char *ficheiroEstacionamentos) {
     int dia, mes, ano;
 
@@ -307,9 +315,8 @@ void listarPorData(char *ficheiroEstacionamentos) {
         printf("Data (DD MM AAAA): ");
         int resultado = scanf("%d %d %d", &dia, &mes, &ano);
         
-        // ✅ CORREÇÃO: Limpar buffer se scanf falhou
         if (resultado != 3) {
-            printf("❌ Entrada inválida! Use números.\n");
+            printf(" Entrada inválida! Use números.\n");
             int c;
             while ((c = getchar()) != '\n' && c != EOF);
             continue;
@@ -334,7 +341,6 @@ void listarPorData(char *ficheiroEstacionamentos) {
     }
 
     estacionamento temp;
-    // ✅ CORREÇÃO: Ler 14 campos (incluindo preço)
     while (fscanf(f, "%d %s %d %d %d %d %d %s %d %d %d %d %d %f",
                   &temp.numE, temp.matricula,
                   &temp.anoE, &temp.mesE, &temp.diaE,
@@ -368,7 +374,7 @@ void listarPorData(char *ficheiroEstacionamentos) {
     fclose(f);
 
     if (numFiltrados == 0) {
-        printf("\n⚠️  Não há estacionamentos para essa data!\n");
+        printf("\n  Não há estacionamentos para essa data!\n");
         printf("Pressione ENTER para continuar...");
         getchar();
         getchar();
@@ -451,10 +457,10 @@ void listarPorMatricula(char *ficheiroEstacionamentos) {
     char matriculaProcurada[10];
 
     printf("\n╔═══════════════════════════════════════════════════════════╗\n");
-    printf("║       🚗 LISTAR ESTACIONAMENTOS POR MATRÍCULA            ║\n");
+    printf("║         LISTAR ESTACIONAMENTOS POR MATRÍCULA            ║\n");
     printf("╚═══════════════════════════════════════════════════════════╝\n\n");
 
-    // ✅ CORREÇÃO: Limpar buffer antes de ler
+    //  CORREÇÃO: Limpar buffer antes de ler
     int c;
     while ((c = getchar()) != '\n' && c != EOF);
 
@@ -466,7 +472,7 @@ void listarPorMatricula(char *ficheiroEstacionamentos) {
         matriculaProcurada[strcspn(matriculaProcurada, "\n")] = 0;
         
         if (!validamatricula(matriculaProcurada)) {
-            printf("❌ Matrícula inválida! Formato: XX-XX-XX\n\n");
+            printf(" Matrícula inválida! Formato: XX-XX-XX\n\n");
         }
     } while (!validamatricula(matriculaProcurada));
 
@@ -476,14 +482,14 @@ void listarPorMatricula(char *ficheiroEstacionamentos) {
 
     FILE *f = fopen(ficheiroEstacionamentos, "r");
     if (f == NULL) {
-        printf("\n❌ Erro ao abrir ficheiro!\n");
+        printf("\n Erro ao abrir ficheiro!\n");
         printf("Pressione ENTER para continuar...");
         getchar();
         return;
     }
 
     estacionamento temp;
-    // ✅ CORREÇÃO: Ler 14 campos
+   
     while (fscanf(f, "%d %s %d %d %d %d %d %s %d %d %d %d %d %f",
                   &temp.numE, temp.matricula,
                   &temp.anoE, &temp.mesE, &temp.diaE,
@@ -512,7 +518,7 @@ void listarPorMatricula(char *ficheiroEstacionamentos) {
     fclose(f);
 
     if (numFiltrados == 0) {
-        printf("\n⚠️  Não há estacionamentos para essa matrícula!\n");
+        printf("\n   Não há estacionamentos para essa matrícula!\n");
         printf("Pressione ENTER para continuar...");
         getchar();
         return;
@@ -522,7 +528,7 @@ void listarPorMatricula(char *ficheiroEstacionamentos) {
     system("cls");
     printf("\n");
     printf("╔═══════════════════════════════════════════════════════════╗\n");
-    printf("║      🚗 HISTÓRICO DA MATRÍCULA: %-10s             ║\n", matriculaProcurada);
+    printf("║       HISTÓRICO DA MATRÍCULA: %-10s             ║\n", matriculaProcurada);
     printf("╚═══════════════════════════════════════════════════════════╝\n\n");
 
     printf("Total de estacionamentos: %d\n\n", numFiltrados);
@@ -550,7 +556,7 @@ void listarPorMatricula(char *ficheiroEstacionamentos) {
         }
     }
 
-    printf("\n💰 Total pago: %.2f €\n", totalPago);
+    printf("\n Total pago: %.2f €\n", totalPago);
 
     printf("\n[G] Gravar em TXT | [C] Gravar em CSV | [0] Voltar: ");
     char op;
@@ -577,7 +583,7 @@ void listarVeiculosNoParque(char *ficheiroEstacionamentos) {
 
     FILE *f = fopen(ficheiroEstacionamentos, "r");
     if (f == NULL) {
-        printf("\n❌ Erro ao abrir ficheiro!\n");
+        printf("\n Erro ao abrir ficheiro!\n");
         printf("Pressione ENTER para continuar...");
         getchar();
         getchar();
@@ -585,7 +591,6 @@ void listarVeiculosNoParque(char *ficheiroEstacionamentos) {
     }
 
     estacionamento temp;
-    // ✅ CORREÇÃO: Ler 14 campos
     while (fscanf(f, "%d %s %d %d %d %d %d %s %d %d %d %d %d %f",
                   &temp.numE, temp.matricula,
                   &temp.anoE, &temp.mesE, &temp.diaE,
@@ -604,7 +609,7 @@ void listarVeiculosNoParque(char *ficheiroEstacionamentos) {
     fclose(f);
 
     if (numFiltrados == 0) {
-        printf("\n⚠️  Não há veículos no parque!\n");
+        printf("\n  Não há veículos no parque!\n");
         printf("Pressione ENTER para continuar...");
         getchar();
         getchar();
@@ -716,7 +721,6 @@ void menuListagens(Confparque config) {
                 break;
             
             case 6:
-                // Sua E3 já existente aqui
                 printf("E3 - Exportar CSV\n");
                 break;
 
@@ -762,12 +766,13 @@ int dataNoIntervalo(int dia, int mes, int ano,
     return (resultado1 >= 0) && (resultado2 <= 0);
 }
 
+// cria a tabela 
 void gerarTabelaDinamica(char *ficheiroEstacionamentos) {
     int diaInicio, mesInicio, anoInicio;
     int diaFim, mesFim, anoFim;
     
     printf("\n╔═══════════════════════════════════════════════════════════╗\n");
-    printf("║          📊 TABELA DINÂMICA - SAÍDAS POR DATA            ║\n");
+    printf("║            TABELA DINÂMICA - SAÍDAS POR DATA            ║\n");
     printf("╚═══════════════════════════════════════════════════════════╝\n\n");
     
     // Pedir data inicial
@@ -775,7 +780,7 @@ void gerarTabelaDinamica(char *ficheiroEstacionamentos) {
         printf("Data INICIAL (DD MM AAAA): ");
         scanf("%d %d %d", &diaInicio, &mesInicio, &anoInicio);
         if (!validaData(diaInicio, mesInicio, anoInicio)) {
-            printf("❌ Data inválida! Tente novamente.\n\n");
+            printf("  Data inválida! Tente novamente.\n\n");
         }
     } while (!validaData(diaInicio, mesInicio, anoInicio));
     
@@ -784,12 +789,12 @@ void gerarTabelaDinamica(char *ficheiroEstacionamentos) {
         printf("Data FINAL (DD MM AAAA): ");
         scanf("%d %d %d", &diaFim, &mesFim, &anoFim);
         if (!validaData(diaFim, mesFim, anoFim)) {
-            printf("❌ Data inválida! Tente novamente.\n\n");
+            printf("  Data inválida! Tente novamente.\n\n");
         }
         
         // Validar se a data final é posterior à inicial
         if (compararDatas(diaFim, mesFim, anoFim, diaInicio, mesInicio, anoInicio) < 0) {
-            printf("❌ Data final deve ser posterior à inicial!\n\n");
+            printf("  Data final deve ser posterior à inicial!\n\n");
         }
     } while (!validaData(diaFim, mesFim, anoFim) ||
              compararDatas(diaFim, mesFim, anoFim, diaInicio, mesInicio, anoInicio) < 0);
@@ -801,7 +806,7 @@ void gerarTabelaDinamica(char *ficheiroEstacionamentos) {
     // Ler ficheiro e processar
     FILE *f = fopen(ficheiroEstacionamentos, "r");
     if (f == NULL) {
-        printf("\n❌ Erro ao abrir ficheiro!\n");
+        printf("\n  Erro ao abrir ficheiro!\n");
         return;
     }
     
@@ -853,7 +858,7 @@ void gerarTabelaDinamica(char *ficheiroEstacionamentos) {
     fclose(f);
     
     if (numDias == 0) {
-        printf("\n⚠️  Não há dados para o intervalo especificado!\n");
+        printf("\n   Não há dados para o intervalo especificado!\n");
         printf("Pressione ENTER para continuar...");
         getchar();
         getchar();
@@ -905,9 +910,9 @@ void gerarTabelaDinamica(char *ficheiroEstacionamentos) {
     
     // Média
     float media = (numDias > 0) ? (totalGeralValor / numDias) : 0.0;
-    printf("\n📈 Valor médio por dia: %.2f €\n", media);
-    printf("📊 Total de dias com saídas: %d\n", numDias);
-    printf("🚗 Total de saídas: %d\n\n", totalGeralSaidas);
+    printf("\n  Valor médio por dia: %.2f €\n", media);
+    printf("  Total de dias com saídas: %d\n", numDias);
+    printf("  Total de saídas: %d\n\n", totalGeralSaidas);
     
     // Opção para gravar em ficheiro
     char opcao;
@@ -925,7 +930,7 @@ void gerarTabelaDinamica(char *ficheiroEstacionamentos) {
         
         FILE *fout = fopen(nomeArq, "w");
         if (fout == NULL) {
-            printf("❌ Erro ao criar ficheiro!\n");
+            printf(" Erro ao criar ficheiro!\n");
             return;
         }
         
@@ -948,7 +953,7 @@ void gerarTabelaDinamica(char *ficheiroEstacionamentos) {
         fprintf(fout, "Valor médio por dia: %.2f €\n", media);
         
         fclose(fout);
-        printf("\n✅ Ficheiro '%s' gravado com sucesso!\n", nomeArq);
+        printf("\n Ficheiro '%s' gravado com sucesso!\n", nomeArq);
     }
     else if (opcao == 'C' || opcao == 'c') {
         char nomeArq[100];
@@ -963,7 +968,7 @@ void gerarTabelaDinamica(char *ficheiroEstacionamentos) {
         
         FILE *fout = fopen(nomeArq, "w");
         if (fout == NULL) {
-            printf("❌ Erro ao criar ficheiro!\n");
+            printf(" Erro ao criar ficheiro!\n");
             return;
         }
         
@@ -979,7 +984,7 @@ void gerarTabelaDinamica(char *ficheiroEstacionamentos) {
         }
         
         fclose(fout);
-        printf("\n✅ Ficheiro '%s' gravado com sucesso!\n", nomeArq);
+        printf("\n Ficheiro '%s' gravado com sucesso!\n", nomeArq);
     }
     
     printf("\nPressione ENTER para continuar...");
