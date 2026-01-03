@@ -14,6 +14,14 @@ void LimpaFicheiroEstac(char *ficheirobase, char *ficheirovalido, char *ficheiro
 int lerconfig(Confparque *config);
 void gerarficheiroocupacao(char *ficheirovalido, char *ficheiroocupacao,
                            int diaU, int mesU, int anoU,int horaU,int minU);
+
+// Verifica se um ano é bissexto.
+// Regras:
+//   - Ano divisível por 4 E NÃO divisível por 100 = bissexto
+//   - OU ano divisível por 400 = bissexto
+// 
+// Parâmetros:
+//   - ano: ano a verificar
 int ABissexto(int ano){
     if ((ano % 4 == 0 && ano % 100 != 0) || (ano % 400 == 0)) {
             return 1;
@@ -21,6 +29,20 @@ int ABissexto(int ano){
         return 0;
     }
 
+// Valida se uma data (dia/mês/ano) é válida.
+// 
+// Validações:
+//   - Ano entre 0 e 2100
+//   - Mês entre 1 e 12
+//   - Dia válido para o mês (considera fevereiro em anos bissextos)
+//   - Meses com 30 dias: abril, junho, setembro, novembro
+//   - Meses com 31 dias: janeiro, março, maio, julho, agosto, outubro, dezembro
+//   - Fevereiro: 28 dias (29 em anos bissextos)
+// 
+// Parâmetros:
+//   - dia: dia do mês (1-31)
+//   - mes: mês do ano (1-12)
+//   - ano: ano (0-2100)
 int validaData(int dia, int mes, int ano) {
     if (ano < 0 || ano > 2100|| mes < 1 || mes > 12) {
         return 0;
@@ -46,6 +68,8 @@ int validaData(int dia, int mes, int ano) {
     }
 }
 
+// Valida o formato de uma matrícula portuguesa.
+// Formato esperado: AA-00-AA
 int validamatricula(char *mat) {
         // Verificar o tamanho
         // Se não tiver exatamente 8 caracteres (ex: "AA-00-AA"), falha logo.
@@ -73,6 +97,7 @@ int validamatricula(char *mat) {
         return 1;
     }
 
+// Valida se um código de lugar do parque é válido.
 int validaLugar(char *lugar, int maxPisos, char maxFila, int maxLugares) {
     // Verificar tamanho mínimo
     if (strlen(lugar) < 3) {
@@ -107,6 +132,8 @@ int validaLugar(char *lugar, int maxPisos, char maxFila, int maxLugares) {
     return 1;
 }
 
+// Verifica se a data/hora de Entrada é ANTES da data/hora de Saída.
+// Garante que um veículo não pode sair antes de entrar.
 int validaEantesS(int diaE, int mesE, int anoE, int horaE, int minE, int diaS, int mesS, int anoS, int horaS, int minS) { //função que garante o carro sai, depois de entrar)
     if(anoE>anoS)
         return 0;
@@ -136,6 +163,7 @@ int validaEantesS(int diaE, int mesE, int anoE, int horaE, int minE, int diaS, i
     return 0;
 }
 
+// Mostra uma mensagem ao utilizador e aguarda Enter para continuar.
 void mostrarMensagem(char *mens){
     printf("\n%s", mens);
     printf("\nDigite <Enter> para continuar... ");
@@ -145,8 +173,7 @@ void mostrarMensagem(char *mens){
 
 
 
-
-
+// Compara duas datas/horas completas.
 int ComparaDatas(int d1, int m1, int a1, int h1, int min1,
                  int d2, int m2, int a2, int h2, int min2) {
     
@@ -168,7 +195,7 @@ int ComparaDatas(int d1, int m1, int a1, int h1, int min1,
     return 0;
 }
 
-
+// Limpa o ecrã do terminal/consola.
 void limparTela(void) {
     #ifdef _WIN32 // Se for Windows
         system("cls");
@@ -177,6 +204,8 @@ void limparTela(void) {
     #endif
 }
 
+// Obtém a data e hora atual do sistema.
+// Usa a biblioteca <time.h> para aceder ao relógio do sistema.
 void obterDataHoraAtual(int *dia, int *mes, int *ano, int *hora, int *min) {
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
@@ -188,6 +217,17 @@ void obterDataHoraAtual(int *dia, int *mes, int *ano, int *hora, int *min) {
     *min = tm.tm_min;
 }
 
+// Calcula as estatísticas de ocupação do parque.
+// 
+// Calcula:
+//   - Total de lugares: pisos × filas × lugares
+//   - Lugares ocupados: veículos que ainda não saíram (anoS = 0)
+//   - Lugares indisponíveis: lidos de "lugares_indisponiveis.txt"
+//   - Lugares disponíveis: total - ocupados - indisponíveis
+// 
+// Lê ficheiros:
+//   - "estacionamentos.txt": para contar ocupação
+//   - "lugares_indisponiveis.txt": para contar indisponíveis
 EstatisticasParque obterEstatisticasParque(Confparque config) {
     EstatisticasParque stats;
     
@@ -231,6 +271,7 @@ EstatisticasParque obterEstatisticasParque(Confparque config) {
     return stats;
 }
 
+// Menu interativo para gerir as tarifas do parque.
 void menuGestaoTarifas(void) {
     Tarifa tarifas[MAX_TARIFAS];
     int numTarifas = 0;
@@ -247,7 +288,7 @@ void menuGestaoTarifas(void) {
         system("cls");
         printf("\n");
         printf("\t╔════════════════════════════════════════════════════╗\n");
-        printf("\t║          💰 GESTÃO DE TARIFAS                      ║\n");
+        printf("\t║             GESTÃO DE TARIFAS                      ║\n");
         printf("\t╚════════════════════════════════════════════════════╝\n\n");
         
         // Mostrar tabela de tarifas atual
@@ -256,11 +297,11 @@ void menuGestaoTarifas(void) {
         printf("\n");
         printf("\t╔════════════════════════════════════════════════════╗\n");
         printf("\t║                                                    ║\n");
-        printf("\t║  1. 📝 Modificar Tarifa                            ║\n");
-        printf("\t║  2. 🔄 Recarregar Tarifas                          ║\n");
-        printf("\t║  3. ℹ️  Informação sobre Tarifas                   ║\n");
+        printf("\t║  1.    Modificar Tarifa                            ║\n");
+        printf("\t║  2.    Recarregar Tarifas                          ║\n");
+        printf("\t║  3.    Informação sobre Tarifas                    ║\n");
         printf("\t║                                                    ║\n");
-        printf("\t║  0. ⬅️  Voltar                                      ║\n");
+        printf("\t║  0.    Voltar                                      ║\n");
         printf("\t║                                                    ║\n");
         printf("\t╚════════════════════════════════════════════════════╝\n");
         printf("\n\t>> Escolha uma opção: ");
@@ -297,18 +338,18 @@ void menuGestaoTarifas(void) {
                 system("cls");
                 printf("\n");
                 printf("╔══════════════════════════════════════════════════════════════╗\n");
-                printf("║              ℹ️  INFORMAÇÃO SOBRE TARIFAS                    ║\n");
+                printf("║                  INFORMAÇÃO SOBRE TARIFAS                    ║\n");
                 printf("╠══════════════════════════════════════════════════════════════╣\n");
                 printf("║                                                              ║\n");
                 printf("║  TIPOS DE TARIFA:                                            ║\n");
                 printf("║  ──────────────────────────────────────────────────────────  ║\n");
                 printf("║                                                              ║\n");
-                printf("║  🕐 TARIFAS HORÁRIAS (Tipo: H)                               ║\n");
+                printf("║     TARIFAS HORÁRIAS (Tipo: H)                               ║\n");
                 printf("║     CT1 - Horário Diurno (ex: 08:00 - 22:00)                ║\n");
                 printf("║     CT2 - Horário Noturno (ex: 22:00 - 08:00)               ║\n");
                 printf("║     → Cobrado por minuto dentro do intervalo                ║\n");
                 printf("║                                                              ║\n");
-                printf("║  📅 TARIFAS DIÁRIAS (Tipo: D)                                ║\n");
+                printf("║     TARIFAS DIÁRIAS (Tipo: D)                                ║\n");
                 printf("║     CT3 - Taxa de Mudança de Dia (pernoita)                 ║\n");
                 printf("║     CT4 - Taxa por Dia Completo (2+ dias)                   ║\n");
                 printf("║     → Aplicado quando o veículo fica mais de 24h            ║\n");
@@ -331,11 +372,11 @@ void menuGestaoTarifas(void) {
             }
             
             case 0:
-                printf("\n↩️  Voltando ao menu de configurações...\n");
+                printf("\n    Voltando ao menu de configurações...\n");
                 break;
             
             default:
-                printf("\n❌ Opção inválida!\n");
+                printf("\n   Opção inválida!\n");
                 mostrarMensagem("Prima Enter para continuar...");
         }
         
@@ -350,13 +391,13 @@ void menuConfiguracoes(Confparque config) {
         system("clear");
         printf("\n");
         printf("\t╔════════════════════════════════════════╗\n");
-        printf("\t║        ⚙️  MENU DE CONFIGURAÇÕES       ║\n");
+        printf("\t║            MENU DE CONFIGURAÇÕES       ║\n");
         printf("\t╠════════════════════════════════════════╣\n");
         printf("\t║                                        ║\n");
-        printf("\t║  1. 🏢 Reconfigurar Parque             ║\n");
-        printf("\t║  2. 💰 Gestão de Tarifas               ║\n");
+        printf("\t║  1.    Reconfigurar Parque             ║\n");
+        printf("\t║  2.    Gestão de Tarifas               ║\n");
         printf("\t║                                        ║\n");
-        printf("\t║  0. ⬅️  Voltar ao menu principal       ║\n");
+        printf("\t║  0.    Voltar ao menu principal        ║\n");
         printf("\t║                                        ║\n");
         printf("\t╚════════════════════════════════════════╝\n");
         printf("\n\t>> Escolha uma opção: ");
@@ -366,7 +407,7 @@ void menuConfiguracoes(Confparque config) {
             case 1: {
                 // Reconfigurar Parque
                 char confirmacao;
-                printf("\n⚠️  ATENÇÃO: Reconfigurar o parque irá reiniciar todas as configurações!\n");
+                printf("\n    ATENÇÃO: Reconfigurar o parque irá reiniciar todas as configurações!\n");
                 printf("Tem a certeza que deseja continuar? (s/n): ");
                 scanf(" %c", &confirmacao);
                 
@@ -376,7 +417,7 @@ void menuConfiguracoes(Confparque config) {
                     personalizapp(config);
                     return; // Sair do menu de configurações
                 } else {
-                    printf("\n✅ Operação cancelada.\n");
+                    printf("\n   Operação cancelada.\n");
                     mostrarMensagem("Prima Enter para continuar...");
                 }
                 break;
@@ -389,11 +430,11 @@ void menuConfiguracoes(Confparque config) {
             }
             
             case 0:
-                printf("\n↩️  Voltando ao menu principal...\n");
+                printf("\n    Voltando ao menu principal...\n");
                 break;
             
             default:
-                printf("\n❌ Opção inválida!\n");
+                printf("\n   Opção inválida!\n");
                 mostrarMensagem("Prima Enter para continuar...");
         }
         
