@@ -3,6 +3,7 @@
 #define MAX_TARIFAS 10
 #include <stdio.h>
 
+//Estrutura que guarda todas as informações referentes às tarifas
 typedef struct tarifa{
     char tipo;
     char codigo[10];
