@@ -1,10 +1,3 @@
-//
-//  Listagens.c
-//  ProjetoEstacionamento
-//
-//  Sistema completo de listagens paginadas
-//
-
 #include "Listagens.h"
 #include "Tarifas.h"
 #include "validacoes.h"
@@ -12,7 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 
 // função para iniciar a paginacao
 ControlePaginacao inicializarPaginacao(int totalRegistos, int registosPorPag) {
