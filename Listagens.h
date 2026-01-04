@@ -1,10 +1,3 @@
-//
-//  Listagens.h
-//  ProjetoEstacionamento
-//
-//  Sistema de listagens paginadas
-
-
 #ifndef Listagens_h
 #define Listagens_h
 
