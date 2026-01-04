@@ -11,6 +11,7 @@
 #define FICHEIRO_OCUPACAO_BIN "ocupacao.bin"
 #define FICHEIRO_CONTADOR_BIN "contador.bin"
 
+// Estrutura de dados para registo de um estacionamento
 typedef struct estacionamento{
     int numE;
     int numValidado;
@@ -21,12 +22,14 @@ typedef struct estacionamento{
     int ativo;
 } estacionamento;
 
+// Estrutura que representa um lugar individual no mapa do parque
 typedef struct {
     char status;
     char matricula[MAX_MATRICULA];
     char motivo;
 } Lugar;
 
+// Estrutura de controlo global do sistema
 typedef struct {
     int ultimoNumE;
     int totalEstacionamentos;
