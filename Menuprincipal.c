@@ -1,10 +1,3 @@
-//
-//  Menuprincipal.c
-//  ProjetoProgramacao
-//
-//  Created by Gonçalo Henrique Viegas Bernardino on 02/01/2026.
-//
-
 #include <stdio.h>
 #include "Util.h"
 #include "Estacionamento.h"
