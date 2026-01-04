@@ -15,7 +15,7 @@ int main(void) {
     Confparque config;
     
     if (!F1) {
-        personalizapp(config);
+        personalizapp(config); //caso a configuração nao tenha sido feita, o utilizador é enviado para a configuração, se a configuração já foi feita, então o menu principal é mostrado
     } else {
         fclose(F1);
         mostrarMenu();
