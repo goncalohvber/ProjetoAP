@@ -14,15 +14,13 @@ int ComparaDatas(int d1, int m1, int a1, int h1, int min1, int d2, int m2, int a
 float CalcularPreco(int dE, int mE, int aE, int hE, int minE, int dS, int mS, int aS, int hS, int minS, Tarifa tarifas[], int numTarifas);
 int lertarifas(Tarifa tarifas[], int *numtarifas);
 
-// ============================================================
 // FUNÇÃO: Limpar e validar ficheiro de estacionamentos
-// ============================================================
 void LimpaFicheiroEstac(char *ficheirobase, char *ficheirovalido, char *ficheiroerros, Confparque config) {
-    
+    // Abertura dos ficheiros: leitura do original e escrita para válidos e erros
     FILE *f_og = fopen(ficheirobase, "r");
     FILE *f_val = fopen(ficheirovalido, "w");
     FILE *f_err = fopen(ficheiroerros, "w");
-
+    // Verificação de segurança na abertura dos ficheiros
     if (f_og == NULL || f_val == NULL || f_err == NULL) {
         printf("Erro critico ao abrir ficheiros.\n");
         
@@ -35,7 +33,7 @@ void LimpaFicheiroEstac(char *ficheirobase, char *ficheirovalido, char *ficheiro
 
     estacionamento E;
     int novoID = 1;
-
+    // Carregamento da tabela de preços (tarifas) para cálculo posterior
     Tarifa tarifas[MAX_TARIFAS];
     int numTarifas = 0;
     
