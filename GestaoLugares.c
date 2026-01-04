@@ -5,11 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #define FICHEIRO_INDISPONIVEIS "lugares_indisponiveis.txt"
 
-
-
+// Função: Exibe todos os dados de um registo de estacionamento
 void mostrarDetalhesEstacionamento(estacionamento E) {
     printf("\n");
     printf("╔═══════════════════════════════════════════════════════════╗\n");
@@ -27,21 +25,21 @@ void mostrarDetalhesEstacionamento(estacionamento E) {
     printf("║     Hora: %02d:%02d                                       ║\n",E.horaE, E.minE);
     printf("║                                                           ║\n");
     if (E.anoS == 0) {
-        printf("║   ESTADO: AINDA NO PARQUE                               ║\n");
+        printf("║   ESTADO: AINDA NO PARQUE                                   ║\n");
     } else {
-        printf("║   SAÍDA:                                                ║\n");
+        printf("║   SAÍDA:                                                    ║\n");
         printf("║     Data: %02d/%02d/%d                                      ║\n",
                E.diaS, E.mesS, E.anoS);
-        printf("║     Hora: %02d:%02d                                          ║\n",
+        printf("║     Hora: %02d:%02d                                         ║\n",
                E.horaS, E.minS);
-        printf("║                                                           ║\n");
-        printf("║   Valor Pago: %.2f €                                   ║\n", E.valorPago);
+        printf("║                                                             ║\n");
+        printf("║   Valor Pago: %.2f €                                        ║\n", E.valorPago);
     }
-
     printf("║                                                           ║\n");
     printf("╚═══════════════════════════════════════════════════════════╝\n");
 }
 
+// Função: Permite ao utilizador pesquisar um registo específico através do ID
 void consultarRegisto(char *ficheiroEstacionamentos) {
     int numProcurado;
     int encontrado = 0;
@@ -50,57 +48,60 @@ void consultarRegisto(char *ficheiroEstacionamentos) {
     printf("║                 CONSULTAR REGISTO                         ║\n");
     printf("╚═══════════════════════════════════════════════════════════╝\n\n");
 
+    // Solicita a entrada do utilizador
     printf("Digite o número de entrada: ");
     scanf("%d", &numProcurado);
 
+    // Abre o ficheiro base para leitura
     FILE *f = fopen(ficheiroEstacionamentos, "r");
     if (f == NULL) {
-        printf("❌ Erro ao abrir ficheiro!\n");
+        printf("Erro ao abrir ficheiro!\n");
         return;
     }
-
     estacionamento E;
-
+    // Lê o ficheiro registo a registo (formato de 13 campos)
     while (fscanf(f, "%d %s %d %d %d %d %d %s %d %d %d %d %d",
                   &E.numE, E.matricula,
                   &E.anoE, &E.mesE, &E.diaE, &E.horaE, &E.minE,
                   E.lugar,
                   &E.anoS, &E.mesS, &E.diaS, &E.horaS, &E.minS) == 13) {
 
+        // Verifica se o ID lido corresponde ao que o utilizador procura
         if (E.numE == numProcurado) {
             encontrado = 1;
 
+            // Se o veículo já tiver saído (anoS != 0), calculamos o preço pago
             if (E.anoS != 0) {
                 Tarifa tarifas[MAX_TARIFAS];
                 int numTarifas = 0;
 
+                // Carrega as tarifas atuais para garantir que o cálculo do preço é exato
                 if (lertarifas(tarifas, &numTarifas)) {
                     E.valorPago = CalcularPreco(E.diaE, E.mesE, E.anoE, E.horaE, E.minE,
                                                E.diaS, E.mesS, E.anoS, E.horaS, E.minS,
                                                tarifas, numTarifas);
                 }
             } else {
+                // Se ainda está no parque, o valor pago é resetado para exibição
                 E.valorPago = 0.0;
             }
-
             mostrarDetalhesEstacionamento(E);
             break;
         }
     }
-
     fclose(f);
-
     if (!encontrado) {
         printf("\n Registo nº %d não encontrado!\n", numProcurado);
     }
 }
 
+// Função: Permite editar campos de um registo já existente
 int alterarRegisto(char *ficheiroEstacionamentos, Confparque config) {
     int numProcurado;
     int encontrado = 0;
 
     printf("\n╔═══════════════════════════════════════════════════════════╗\n");
-    printf("║                 ALTERAR REGISTO                         ║\n");
+    printf("║                   ALTERAR REGISTO                         ║\n");
     printf("╚═══════════════════════════════════════════════════════════╝\n\n");
 
     printf("Digite o número de entrada a alterar: ");
@@ -109,13 +110,11 @@ int alterarRegisto(char *ficheiroEstacionamentos, Confparque config) {
     // Ler todos os registos
     FILE *f = fopen(ficheiroEstacionamentos, "r");
     if (f == NULL) {
-        printf("❌ Erro ao abrir ficheiro!\n");
+        printf("Erro ao abrir ficheiro!\n");
         return 0;
     }
-
     estacionamento registos[MAX_REG_EST];
     int numRegistos = 0;
-
     while (fscanf(f, "%d %s %d %d %d %d %d %s %d %d %d %d %d",
                   &registos[numRegistos].numE,
                   registos[numRegistos].matricula,
@@ -225,7 +224,6 @@ int alterarRegisto(char *ficheiroEstacionamentos, Confparque config) {
                 printf(" Este veículo ainda não saiu! Use 'Registar Saída' primeiro.\n");
                 return 0;
             }
-
             int dia, mes, ano, hora, min;
             do {
                 printf("Nova data de saída (DD MM AAAA): ");
@@ -234,20 +232,16 @@ int alterarRegisto(char *ficheiroEstacionamentos, Confparque config) {
                     printf(" Data inválida!\n");
                     continue;
                 }
-
                 printf("Nova hora de saída (HH MM): ");
                 scanf("%d %d", &hora, &min);
-
                 if (!validaEantesS(registos[indice].diaE, registos[indice].mesE,
                                   registos[indice].anoE, registos[indice].horaE,
                                   registos[indice].minE, dia, mes, ano, hora, min)) {
                     printf(" Saída deve ser posterior à entrada!\n");
                     continue;
                 }
-
                 break;
             } while (1);
-
             registos[indice].diaS = dia;
             registos[indice].mesS = mes;
             registos[indice].anoS = ano;
@@ -271,7 +265,6 @@ int alterarRegisto(char *ficheiroEstacionamentos, Confparque config) {
         printf(" Erro ao gravar ficheiro!\n");
         return 0;
     }
-
     for (int i = 0; i < numRegistos; i++) {
         fprintf(f, "%d\t%s\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%d\t%d\t%d\t%d\n",
                 registos[i].numE, registos[i].matricula,
@@ -282,20 +275,19 @@ int alterarRegisto(char *ficheiroEstacionamentos, Confparque config) {
                 registos[i].horaS, registos[i].minS);
     }
     fclose(f);
-
     printf("\n Registo alterado com sucesso!\n");
     printf("\n Novo registo:\n");
     mostrarDetalhesEstacionamento(registos[indice]);
-
     return 1;
 }
 
+// Função: Remove permanentemente um registo do ficheiro de estacionamentos.
 int eliminarRegisto(char *ficheiroEstacionamentos) {
     int numProcurado;
     int encontrado = 0;
 
     printf("\n╔═══════════════════════════════════════════════════════════╗\n");
-    printf("║                ELIMINAR REGISTO                        ║\n");
+    printf("║                   ELIMINAR REGISTO                        ║\n");
     printf("╚═══════════════════════════════════════════════════════════╝\n\n");
 
     printf("Digite o número de entrada a eliminar: ");
@@ -307,10 +299,8 @@ int eliminarRegisto(char *ficheiroEstacionamentos) {
         printf(" Erro ao abrir ficheiro!\n");
         return 0;
     }
-
     estacionamento registos[MAX_REG_EST];
     int numRegistos = 0;
-
     while (fscanf(f, "%d %s %d %d %d %d %d %s %d %d %d %d %d",
                   &registos[numRegistos].numE,
                   registos[numRegistos].matricula,
@@ -321,19 +311,17 @@ int eliminarRegisto(char *ficheiroEstacionamentos) {
                   &registos[numRegistos].anoS, &registos[numRegistos].mesS,
                   &registos[numRegistos].diaS, &registos[numRegistos].horaS,
                   &registos[numRegistos].minS) == 13) {
-
         if (registos[numRegistos].numE == numProcurado) {
             encontrado = 1;
         }
         numRegistos++;
     }
     fclose(f);
-
     if (!encontrado) {
         printf("\n Registo nº %d não encontrado!\n", numProcurado);
         return 0;
     }
-
+    
     // Mostrar registo a eliminar
     for (int i = 0; i < numRegistos; i++) {
         if (registos[i].numE == numProcurado) {
@@ -358,7 +346,6 @@ int eliminarRegisto(char *ficheiroEstacionamentos) {
         printf(" Erro ao gravar ficheiro!\n");
         return 0;
     }
-
     for (int i = 0; i < numRegistos; i++) {
         if (registos[i].numE != numProcurado) {
             fprintf(f, "%d\t%s\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%d\t%d\t%d\t%d\n",
@@ -371,11 +358,11 @@ int eliminarRegisto(char *ficheiroEstacionamentos) {
         }
     }
     fclose(f);
-
     printf("\n Registo eliminado com sucesso!\n");
     return 1;
 }
 
+// Função: Lê o ficheiro de lugares indisponíveis e atualiza a matriz do mapa
 void carregarLugaresIndisponiveis(Lugar mapa[][MAX_FILAS][MAX_LUGARES],
                                   Confparque config) {
     FILE *f = fopen(FICHEIRO_INDISPONIVEIS, "r");
@@ -386,17 +373,17 @@ void carregarLugaresIndisponiveis(Lugar mapa[][MAX_FILAS][MAX_LUGARES],
     char lugar[MAX_LUGAR];
     char motivo;
 
+    // Lê o ficheiro enquanto encontrar pares de dados (Lugar e Motivo)
     while (fscanf(f, "%s %c", lugar, &motivo) == 2) {
         int piso, fila, numero;
         ProcessarLugar(lugar, &piso, &fila, &numero);
-
         piso--;
         numero--;
 
+        // Garante que o lugar lido existe na configuração atual do parque
         if (piso >= 0 && piso < config.numpisos &&
             fila >= 0 && fila < config.numfilas &&
             numero >= 0 && numero < config.numlugares) {
-
             mapa[piso][fila][numero].status = motivo;
             mapa[piso][fila][numero].motivo = motivo;
         }
@@ -405,6 +392,7 @@ void carregarLugaresIndisponiveis(Lugar mapa[][MAX_FILAS][MAX_LUGARES],
     fclose(f);
 }
 
+// Função: Percorre a matriz do mapa e grava num ficheiro todos os lugares que não estão livres
 void guardarLugaresIndisponiveis(Lugar mapa[][MAX_FILAS][MAX_LUGARES],
                                  Confparque config) {
     FILE *f = fopen(FICHEIRO_INDISPONIVEIS, "w");
@@ -413,6 +401,7 @@ void guardarLugaresIndisponiveis(Lugar mapa[][MAX_FILAS][MAX_LUGARES],
         return;
     }
 
+    // Percorrer cada coordenada da matriz
     for (int p = 0; p < config.numpisos; p++) {
         for (int fil = 0; fil < config.numfilas; fil++) {
             for (int l = 0; l < config.numlugares; l++) {
@@ -427,10 +416,10 @@ void guardarLugaresIndisponiveis(Lugar mapa[][MAX_FILAS][MAX_LUGARES],
             }
         }
     }
-
     fclose(f);
 }
 
+// Função: Interface para o utilizador marcar um lugar como indisponível no sistema
 int marcarLugarIndisponivel(Confparque config) {
     char lugar[MAX_LUGAR];
     char motivo;
@@ -439,7 +428,8 @@ int marcarLugarIndisponivel(Confparque config) {
     printf("\n╔═════════════════════════════════════════════════════════════╗\n");
     printf("║          MARCAR LUGAR COMO INDISPONÍVEL                     ║\n");
     printf("╚═════════════════════════════════════════════════════════════╝\n\n");
-    
+
+    // Obter e validar a sintaxe do lugar
     do {
         printf("Digite o lugar (ex: 1A05): ");
         scanf("%s", lugar);
@@ -459,9 +449,10 @@ int marcarLugarIndisponivel(Confparque config) {
                       E.lugar,
                       &E.anoS, &E.mesS, &E.diaS, &E.horaS, &E.minS) == 13) {
 
+            // Se o lugar coincide e o ano de saída é 0, o carro ainda está lá
             if (strcmp(E.lugar, lugar) == 0 && E.anoS == 0) {
                 fclose(f);
-                printf("❌ Este lugar está ocupado (matrícula: %s)!\n", E.matricula);
+                printf(" Este lugar está ocupado (matrícula: %s)!\n", E.matricula);
                 printf("   Registe a saída primeiro.\n");
                 return 0;
             }
@@ -469,8 +460,9 @@ int marcarLugarIndisponivel(Confparque config) {
         fclose(f);
     }
 
+    // Escolha do Motivo
     printf("\n╔═══════════════════════════════════════╗\n");
-    printf("║  Motivo da indisponibilidade:        ║\n");
+    printf("║  Motivo da indisponibilidade:         ║\n");
     printf("╠═══════════════════════════════════════╣\n");
     printf("║  i - Condições inadequadas            ║\n");
     printf("║  o - Objeto de obras                  ║\n");
@@ -480,12 +472,15 @@ int marcarLugarIndisponivel(Confparque config) {
     printf("Motivo: ");
     scanf(" %c", &motivo);
 
+    // Validação do motivo
     if (motivo != 'i' && motivo != 'o' && motivo != 'r' && motivo != 'm') {
-        printf("❌ Motivo inválido!\n");
+        printf(" Motivo inválido!\n");
         return 0;
     }
-
+    // Atualização do Estado
     Lugar mapa[MAX_PISOS][MAX_FILAS][MAX_LUGARES];
+
+    // Prepara o mapa em memória
     InicializarMapa(mapa, config);
     carregarLugaresIndisponiveis(mapa, config);
 
@@ -494,14 +489,16 @@ int marcarLugarIndisponivel(Confparque config) {
     piso--;
     numero--;
 
+    // Aplica a alteração
     mapa[piso][fila][numero].status = motivo;
     mapa[piso][fila][numero].motivo = motivo;
 
     guardarLugaresIndisponiveis(mapa, config);
-
-    printf("\n✅ Lugar %s marcado como indisponível (motivo: %c)\n", lugar, motivo);
+    printf("\n Lugar %s marcado como indisponível (motivo: %c)\n", lugar, motivo);
     return 1;
 }
+
+// Função: Remove a marcação de indisponibilidade de um lugar
 int tornarLugarDisponivel(Confparque config) {
     char lugar[MAX_LUGAR];
     char letraMaxFila = 'A' + (config.numfilas - 1);
@@ -510,6 +507,7 @@ int tornarLugarDisponivel(Confparque config) {
     printf("║          TORNAR LUGAR DISPONÍVEL                        ║\n");
     printf("╚═══════════════════════════════════════════════════════════╝\n\n");
 
+    // Obter e validar o identificador do lugar
     do {
         printf("Digite o lugar (ex: 1A05): ");
         scanf("%s", lugar);
@@ -519,10 +517,12 @@ int tornarLugarDisponivel(Confparque config) {
         }
     } while (!validaLugar(lugar, config.numpisos, letraMaxFila, config.numlugares));
 
+    // ETAPA 2: Carregar o mapa atual de indisponíveis 
     Lugar mapa[MAX_PISOS][MAX_FILAS][MAX_LUGARES];
     InicializarMapa(mapa, config);
     carregarLugaresIndisponiveis(mapa, config);
 
+    // Converte a string para coordenadas da matriz
     int piso, fila, numero;
     ProcessarLugar(lugar, &piso, &fila, &numero);
     piso--;
@@ -530,36 +530,36 @@ int tornarLugarDisponivel(Confparque config) {
 
     char statusAtual = mapa[piso][fila][numero].status;
 
+    // Verificar se o lugar realmente precisa de ser libertado
     if (statusAtual != 'i' && statusAtual != 'o' &&
         statusAtual != 'r' && statusAtual != 'm') {
-        printf("❌ Este lugar já está disponível!\n");
+        printf("Este lugar já está disponível!\n");
         return 0;
     }
 
+    // Confirmação e Alteração
     printf("Lugar %s está marcado como: %c\n", lugar, statusAtual);
     char confirmacao;
     printf("Deseja torná-lo disponível? (s/n): ");
     scanf(" %c", &confirmacao);
-
     if (confirmacao != 's' && confirmacao != 'S') {
-        printf("❌ Operação cancelada.\n");
+        printf("Operação cancelada.\n");
         return 0;
     }
-
     mapa[piso][fila][numero].status = '-';
     mapa[piso][fila][numero].motivo = '\0';
 
     // Guardar
     guardarLugaresIndisponiveis(mapa, config);
-
     printf("\n Lugar %s agora está disponível!\n", lugar);
     return 1;
 }
 
+// Função: Menu dedicado à administração e manutenção do parque
 void menuGestaoLugares(Confparque config) {
     int opcao;
     if (!lerconfig(&config)) {
-            printf("❌ ERRO: Não foi possível carregar a configuração do parque!\n");
+            printf("Erro: Não foi possível carregar a configuração do parque!\n");
             return;
         }
     do {
